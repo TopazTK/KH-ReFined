@@ -1,13 +1,12 @@
-﻿using Binarysharp.MSharp;
-using DiscordRPC;
+﻿using DiscordRPC;
+using Binarysharp.MSharp;
 
 using ReFined.KH2.Menus;
 using ReFined.Libraries;
-using System.Runtime.InteropServices;
 
 namespace ReFined.KH2.Information
 {
-    public class Variables
+    public static class Variables
     {
         //
         // CONFIG VARIABLES

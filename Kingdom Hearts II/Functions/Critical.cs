@@ -6,7 +6,7 @@ using BSharpConvention = Binarysharp.MSharp.Assembly.CallingConvention.CallingCo
 
 namespace ReFined.KH2.Functions
 {
-    internal class Critical
+    public static class Critical
     {
         public static IntPtr OffsetCampMenu;
         public static IntPtr OffsetShutMusic;

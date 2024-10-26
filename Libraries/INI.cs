@@ -12,7 +12,7 @@ using System.Runtime.InteropServices;
 
 namespace ReFined.Libraries
 {
-    class INI
+    public class INI
     {
         string Path;
         string EXE = Assembly.GetExecutingAssembly().GetName().Name;

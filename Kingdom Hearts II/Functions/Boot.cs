@@ -8,30 +8,31 @@ using Binarysharp.MSharp;
 
 namespace ReFined.KH2.Functions
 {
-    internal class Boot
+    public static class Boot
     {
         public static void Initialization()
         {
-            var _versionString = Variables.IS_LITE ? "Re:Freshed" : "Re:Fined";
+            var _versionString = "Re:Fined";
 
             try
             {
                 Configuration.Initialize();
-
-                Terminal.Log("Welcome to " + _versionString + " v5.00!", 0);
-                Terminal.Log("Please be patient while " + _versionString + " initializes.", 0);
-
                 var _configIni = new INI("reFined.cfg");
+
+                Variables.DISCORD_TOGGLE = Convert.ToBoolean(_configIni.Read("discordRPC", "General"));
+                Variables.IS_LITE = Convert.ToBoolean(_configIni.Read("liteMode", "General"));
+                Variables.RESET_PROMPT = Convert.ToBoolean(_configIni.Read("resetPrompt", "Kingdom Hearts II"));
+                Variables.RESET_COMBO = Convert.ToUInt16(_configIni.Read("resetCombo", "General"), 16);
+                Variables.RETRY_DEFAULT = _configIni.Read("deathPrompt", "Kingdom Hearts II") == "retry" ? true : false;
+
+                _versionString = Variables.IS_LITE ? "Re:Freshed" : "Re:Fined";
+
+                Terminal.Log("Welcome to " + _versionString + " Patreon BETA v0.50!", 0);
+                Terminal.Log("Please be patient while " + _versionString + " initializes.", 0);
 
                 Terminal.Log("Initializing SharpHook...", 0);
                 Variables.SharpHook = new MemorySharp(Hypervisor.Process);
                 Variables.DiscordClient.Initialize();
-
-                Terminal.Log("Initializing Configuration...", 0);
-                Variables.RESET_PROMPT = Convert.ToBoolean(_configIni.Read("resetPrompt", "Kingdom Hearts II"));
-
-                Terminal.Log("Unlocking Memory Regions...", 0);
-                Hypervisor.UnlockBlock(0x360000);
 
                 Terminal.Log("Locating Function Signatures...", 0);
 
@@ -82,23 +83,22 @@ namespace ReFined.KH2.Functions
 
                     var _entAudio = new Config.Entry()
                     {
-                        Count = 3,
+                        Count = 2,
                         Title = 0x01BD,
 
                         Buttons = new List<ushort>()
                         {
                             0x01C4,
-                            0x01C5,
-                            0x01D9
+                            0x01C5
                         },
 
                         Descriptions = new List<ushort>()
                         {
                             0x01D0,
-                            0x01D1,
-                            0x01DA
+                            0x01D1                      
                         }
                     };
+
                     var _entMusic = new Config.Entry()
                     {
                         Count = 2,

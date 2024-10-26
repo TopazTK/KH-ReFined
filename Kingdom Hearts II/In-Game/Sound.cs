@@ -2,7 +2,7 @@
 
 namespace ReFined.KH2.InGame
 {
-    internal class Sound
+    public static class Sound
     {
         public static IntPtr OffsetSound;
 

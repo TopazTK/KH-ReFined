@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ReFined.Common
 {
-    internal class Configuration
+    public static class Configuration
     {
         public static void Initialize()
         {
@@ -15,6 +15,7 @@ namespace ReFined.Common
                 var _outDefault = new string[]
                 {
                     "[General]",
+                    "liteMode = false",
                     "discordRPC = true",
                     "resetCombo = 0x0300",
                     "",

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ReFined.Common
 {
-    internal class Terminal
+    public static class Terminal
     {
         static string _logFileName = "";
 
