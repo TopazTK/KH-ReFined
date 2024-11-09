@@ -43,13 +43,13 @@ namespace ReFined.KH2.Functions
                     // Start the prompt task.
                     Task.Factory.StartNew(() =>
                     {
-                        Terminal.Log("Waiting 2.5 seconds before execution.", 0);
+                        Terminal.Log("Waiting 2.2 seconds before execution.", 0);
 
                         // For the next 2 seconds:
-                        while ((DateTime.Now - _currentTime) < TimeSpan.FromMilliseconds(2500))
+                        while ((DateTime.Now - _currentTime) < TimeSpan.FromMilliseconds(2200))
                         {
                             // Monitor the buttons, and if pressed:
-                            var _buttonSeek = (_confirmRead == 0x01 ? 0x20 : 0x40);
+                            var _buttonSeek = (_confirmRead == 0x01 ? 0x2000 : 0x4000);
                             var _buttonSecond = Hypervisor.Read<ushort>(Variables.ADDR_Input);
 
                             // Cancel the reset.
