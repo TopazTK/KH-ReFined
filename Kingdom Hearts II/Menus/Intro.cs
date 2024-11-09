@@ -62,7 +62,7 @@ namespace ReFined.KH2.Menus
             }
         }
 
-        public static ObservableCollection<Entry> Children;
+        public ObservableCollection<Entry> Children;
 
         public Intro()
         {
@@ -78,7 +78,7 @@ namespace ReFined.KH2.Menus
                 _entDifficulty,
                 _entVibration,
                 _entAutosave,
-                _entController
+                _entController,
             };
 
             Children.CollectionChanged += Submit;
@@ -105,16 +105,20 @@ namespace ReFined.KH2.Menus
             }
             
             byte _lastIndex = (byte)(Children.Count - 1);
+
+            // Redirect the menu table.
             
             Hypervisor.Write(Variables.HFIX_IntroOffsets[0] + 0x233, 0x820204);
             Hypervisor.Write(Variables.HFIX_IntroOffsets[0] + 0x253, 0x820200);
             Hypervisor.Write(Variables.HFIX_IntroOffsets[0] + 0x276, 0x82020C);
             Hypervisor.Write(Variables.HFIX_IntroOffsets[0] + 0x406, 0x82021C);
 
-            Hypervisor.RedirectInstruction(Variables.HFIX_IntroOffsets[1] + 0x0AF, 0x820208);
-            Hypervisor.RedirectInstruction(Variables.HFIX_IntroOffsets[1] + 0x1DA, 0x820200);
-            Hypervisor.RedirectInstruction(Variables.HFIX_IntroOffsets[1] + 0x3D7, 0x820200);
-            Hypervisor.RedirectInstruction(Variables.HFIX_IntroOffsets[2] + 0x03D, 0x82021C);
+            Hypervisor.RedirectLEA(Variables.HFIX_IntroOffsets[1] + 0x0AF, 0x820208);
+            Hypervisor.RedirectLEA(Variables.HFIX_IntroOffsets[1] + 0x1DA, 0x820200);
+            Hypervisor.RedirectLEA(Variables.HFIX_IntroOffsets[1] + 0x3D7, 0x820200);
+            Hypervisor.RedirectLEA(Variables.HFIX_IntroOffsets[2] + 0x03D, 0x82021C);
+
+            // Write the counts and the last indexes.
 
             Hypervisor.Write(Variables.HFIX_IntroOffsets[3] + 0x097, (byte)Children.Count);
             Hypervisor.Write(Variables.HFIX_IntroOffsets[3] + 0x1F5, (byte)Children.Count);
@@ -126,7 +130,15 @@ namespace ReFined.KH2.Menus
             Hypervisor.Write(Variables.HFIX_IntroOffsets[2] + 0x031, _lastIndex);
             Hypervisor.Write(Variables.HFIX_IntroOffsets[3] + 0x08E, _lastIndex);
 
-             if (sender == null)
+            // Redirect the chosen option memory space.
+
+            Hypervisor.Write(Variables.HFIX_IntroOffsets[0] + 0x3B5, 0x820500);
+
+            Hypervisor.RedirectLEA(Variables.HFIX_IntroOffsets[1] + 0x0A8, 0x820500);
+            Hypervisor.RedirectLEA(Variables.HFIX_IntroOffsets[4] + 0x1F2, 0x820500);
+            Hypervisor.RedirectMOV(Variables.HFIX_IntroOffsets[5] + 0x2BF, 0x820500);
+
+            if (sender == null)
             Terminal.Log("Menu submitted successfully!", 0);
         }
     }

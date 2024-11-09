@@ -126,18 +126,18 @@ namespace ReFined.KH2.Menus
             var _diffPointer = (0x820004U + 0x14U * _lastIndex);
 
             // List Redirectors.
-            Hypervisor.RedirectInstruction(Variables.HFIX_ConfigOffsets[0] + 0x031, 0x820000);
-            Hypervisor.RedirectInstruction(Variables.HFIX_ConfigOffsets[0] + 0x047, 0x820000);
-            Hypervisor.RedirectInstruction(Variables.HFIX_ConfigOffsets[2] + 0x27B, 0x820000);
-            Hypervisor.RedirectInstruction(Variables.HFIX_ConfigOffsets[2] + 0x291, 0x820000);
-            Hypervisor.RedirectInstruction(Variables.HFIX_ConfigOffsets[4] + 0x2C3, 0x820000);
-            Hypervisor.RedirectInstruction(Variables.HFIX_ConfigOffsets[5] + 0x078, 0x820000);
-            Hypervisor.RedirectInstruction(Variables.HFIX_ConfigOffsets[5] + 0x0BC, 0x820000);
-            Hypervisor.RedirectInstruction(Variables.HFIX_ConfigOffsets[5] + 0x1DA, 0x820000);
+            Hypervisor.RedirectLEA(Variables.HFIX_ConfigOffsets[0] + 0x031, 0x820000);
+            Hypervisor.RedirectLEA(Variables.HFIX_ConfigOffsets[0] + 0x047, 0x820000);
+            Hypervisor.RedirectLEA(Variables.HFIX_ConfigOffsets[2] + 0x27B, 0x820000);
+            Hypervisor.RedirectLEA(Variables.HFIX_ConfigOffsets[2] + 0x291, 0x820000);
+            Hypervisor.RedirectLEA(Variables.HFIX_ConfigOffsets[4] + 0x2C3, 0x820000);
+            Hypervisor.RedirectLEA(Variables.HFIX_ConfigOffsets[5] + 0x078, 0x820000);
+            Hypervisor.RedirectLEA(Variables.HFIX_ConfigOffsets[5] + 0x0BC, 0x820000);
+            Hypervisor.RedirectLEA(Variables.HFIX_ConfigOffsets[5] + 0x1DA, 0x820000);
 
             // Description Redirectors.
-            Hypervisor.RedirectInstruction(Variables.HFIX_ConfigOffsets[2] + 0x323, 0x82000C);
-            Hypervisor.RedirectInstruction(Variables.HFIX_ConfigOffsets[4] + 0x487, 0x82000C);
+            Hypervisor.RedirectLEA(Variables.HFIX_ConfigOffsets[2] + 0x323, 0x82000C);
+            Hypervisor.RedirectLEA(Variables.HFIX_ConfigOffsets[4] + 0x487, 0x82000C);
 
             // Write the count flag.
             Hypervisor.Write(Variables.HFIX_ConfigOffsets[1] + 0x127 + 0x02, _countFlag);
@@ -159,10 +159,10 @@ namespace ReFined.KH2.Menus
             Hypervisor.Write(Variables.HFIX_ConfigOffsets[5] + 0x2AB + 0x02, _lastIndex);
 
             // Redirect Difficulty Option selectors.
-            Hypervisor.RedirectInstruction(Variables.HFIX_ConfigOffsets[5] + 0x0F5, _diffPointer);
-            Hypervisor.RedirectInstruction(Variables.HFIX_ConfigOffsets[5] + 0x1BB, _diffPointer);
-            Hypervisor.RedirectInstruction(Variables.HFIX_ConfigOffsets[5] + 0x1FC, _diffPointer); 
-            Hypervisor.RedirectInstruction(Variables.HFIX_ConfigOffsets[5] + 0x244, _diffPointer);
+            Hypervisor.RedirectLEA(Variables.HFIX_ConfigOffsets[5] + 0x0F5, _diffPointer);
+            Hypervisor.RedirectLEA(Variables.HFIX_ConfigOffsets[5] + 0x1BB, _diffPointer);
+            Hypervisor.RedirectLEA(Variables.HFIX_ConfigOffsets[5] + 0x1FC, _diffPointer); 
+            Hypervisor.RedirectLEA(Variables.HFIX_ConfigOffsets[5] + 0x244, _diffPointer);
 
             // Must always point to Command Menu Selection.
             Hypervisor.Write(Variables.HFIX_ConfigOffsets[0] + 0x05E + 0x03, (byte)(_lastIndex - 1));
