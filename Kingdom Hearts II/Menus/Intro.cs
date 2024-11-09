@@ -1,4 +1,5 @@
 ﻿
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 
@@ -17,6 +18,18 @@ namespace ReFined.KH2.Menus
             public uint Title;
             public List<uint> Buttons;
             public List<uint> Descriptions;
+
+            public Entry(uint Count, uint Flair, uint Title, uint[] Buttons, uint[] Descriptions)
+            {
+                this.Count = Count;
+                this.Flair = Flair;
+                this.Title = Title;
+                this.Buttons = new List<uint>();
+                this.Descriptions = new List<uint>();
+
+                this.Buttons.AddRange(Buttons);
+                this.Descriptions.AddRange(Descriptions);
+            }
 
             public uint[] Export()
             {
@@ -55,84 +68,10 @@ namespace ReFined.KH2.Menus
         {
             Terminal.Log("Initializing Menu: Intro, with Default Parameters...", 0);
 
-            var _entAutosave = new Entry()
-            {
-                Count = 3,
-                Flair = 0xE005,
-                Title = 0xFFFFFFFF,
-
-                Buttons = new List<uint>()
-                {
-                    0x81C1,
-                    0x81C2,
-                    0x81C3
-                },
-
-                Descriptions = new List<uint>()
-                {
-                    0x81CD,
-                    0x81CE,
-                    0x81CF
-                }
-            };
-            var _entVibration = new Entry()
-            {
-                Count = 2,
-                Flair = 0xC337,
-                Title = 0xC381,
-
-                Buttons = new List<uint>()
-                {
-                    0xC338,
-                    0xC339
-                },
-
-                Descriptions = new List<uint>()
-                {
-                    0xC33A,
-                    0xC33B
-                }
-            };
-            var _entDifficulty = new Entry()
-            {
-                Count = 4,
-                Flair = 0xC330,
-                Title = 0xC380,
-
-                Buttons = new List<uint>()
-                {
-                    0xC331,
-                    0xC332,
-                    0xC333,
-                    0xCE33
-                },
-
-                Descriptions = new List<uint>()
-                {
-                    0xC334,
-                    0xC335,
-                    0xC336,
-                    0xCE34
-                }
-            };
-            var _entController = new Entry()
-            {
-                Count = 2,
-                Flair = 0xE009,
-                Title = 0xFFFFFFFF,
-
-                Buttons = new List<uint>()
-                {
-                    0x81CA,
-                    0x81CC,
-                },
-
-                Descriptions = new List<uint>()
-                {
-                    0x81D6,
-                    0x81D8
-                }
-            };
+            var _entDifficulty = new Entry(4, 0xC330, 0xC380, [0xC331, 0xC332, 0xC333, 0xCE33], [0xC334, 0xC335, 0xC336, 0xCE34]);
+            var _entVibration = new Entry(2, 0xC337, 0xC381, [0xC338, 0xC339], [0xC33A, 0xC33B]);
+            var _entAutosave = new Entry(3, 0x0133, 0x0000, [0x0105, 0x0107, 0x0109], [0x0106, 0x0108, 0x010A]);
+            var _entController = new Entry(2, 0x0137, 0x0000, [0x0123, 0x0125], [0x0124, 0x0126]);
 
             Children = new ObservableCollection<Entry>()
             {
@@ -164,20 +103,30 @@ namespace ReFined.KH2.Menus
 
                 Hypervisor.Write(Variables.ADDR_NewGameMenu + (ulong)(i * 0x2C), _childWrite);
             }
-
+            
             byte _lastIndex = (byte)(Children.Count - 1);
+            
+            Hypervisor.Write(Variables.HFIX_IntroOffsets[0] + 0x233, 0x820204);
+            Hypervisor.Write(Variables.HFIX_IntroOffsets[0] + 0x253, 0x820200);
+            Hypervisor.Write(Variables.HFIX_IntroOffsets[0] + 0x276, 0x82020C);
+            Hypervisor.Write(Variables.HFIX_IntroOffsets[0] + 0x406, 0x82021C);
 
-            Hypervisor.Write(0x2B79D7, (byte)Children.Count);
-            Hypervisor.Write(0x2B7B35, (byte)Children.Count);
-            Hypervisor.Write(0x2B7E71, (byte)Children.Count);
-            Hypervisor.Write(0x2B802F, (byte)Children.Count);
+            Hypervisor.RedirectInstruction(Variables.HFIX_IntroOffsets[1] + 0x0AF, 0x820208);
+            Hypervisor.RedirectInstruction(Variables.HFIX_IntroOffsets[1] + 0x1DA, 0x820200);
+            Hypervisor.RedirectInstruction(Variables.HFIX_IntroOffsets[1] + 0x3D7, 0x820200);
+            Hypervisor.RedirectInstruction(Variables.HFIX_IntroOffsets[2] + 0x03D, 0x82021C);
 
-            Hypervisor.Write(0x2B79CE, _lastIndex);
-            Hypervisor.Write(0x2B8D07, _lastIndex);
-            Hypervisor.Write(0x2B912B, _lastIndex);
-            Hypervisor.Write(0x2B91B1, _lastIndex);
+            Hypervisor.Write(Variables.HFIX_IntroOffsets[3] + 0x097, (byte)Children.Count);
+            Hypervisor.Write(Variables.HFIX_IntroOffsets[3] + 0x1F5, (byte)Children.Count);
+            Hypervisor.Write(Variables.HFIX_IntroOffsets[3] + 0x531, (byte)Children.Count);
+            Hypervisor.Write(Variables.HFIX_IntroOffsets[4] + 0x1EF, (byte)Children.Count);
 
-            if (sender == null)
+            Hypervisor.Write(Variables.HFIX_IntroOffsets[0] + 0x3F7, _lastIndex);
+            Hypervisor.Write(Variables.HFIX_IntroOffsets[1] + 0x3CB, _lastIndex);
+            Hypervisor.Write(Variables.HFIX_IntroOffsets[2] + 0x031, _lastIndex);
+            Hypervisor.Write(Variables.HFIX_IntroOffsets[3] + 0x08E, _lastIndex);
+
+             if (sender == null)
             Terminal.Log("Menu submitted successfully!", 0);
         }
     }

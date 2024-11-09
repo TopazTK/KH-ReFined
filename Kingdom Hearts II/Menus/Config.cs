@@ -17,6 +17,17 @@ namespace ReFined.KH2.Menus
             public List<ushort> Buttons;
             public List<ushort> Descriptions;
 
+            public Entry(ushort Count, ushort Title, ushort[] Buttons, ushort[] Descriptions)
+            {
+                this.Count = Count;
+                this.Title = Title;
+                this.Buttons = new List<ushort>();
+                this.Descriptions = new List<ushort>();
+
+                this.Buttons.AddRange(Buttons);
+                this.Descriptions.AddRange(Descriptions);
+            }
+
             public ushort[] Export()
             {
                 var _returnList = new List<ushort>()
@@ -53,206 +64,18 @@ namespace ReFined.KH2.Menus
         {
             Terminal.Log("Initializing Menu: Config, with Default Parameters...", 0);
 
-            var _entFieldCam = new Entry()
-            {
-                Count = 2,
-                Title = 0xB717,
-                
-                Buttons = new List<ushort>()
-                {
-                    0xB71E,
-                    0xB71F
-                },
+            var _entFieldCam = new Entry(2, 0xB717, [0xB71E, 0xB71F], [0xB720, 0xB721]);
+            var _entRightStick = new Entry(2, 0xB718, [0xB722, 0xB723], [0xB724, 0xB725]);
+            var _entCameraV = new Entry(2, 0xC2F5, [0xC2F8, 0xC2F9], [0xC2FA, 0xC2FB]);
+            var _entCameraH = new Entry(2, 0xC2F6, [0xC2FC, 0xC2FD], [0xC2FE, 0xC2FF]);
+            var _entSummonFX = new Entry(3, 0xC2F7, [0xC302, 0xC300, 0xC301], [0xC305, 0xC303, 0xC304]);
+            var _entNavigation = new Entry(2, 0xB719, [0xB726, 0xB727], [0xB728, 0xB729]);
+            var _entAutosave = new Entry(3, 0x0104, [0x0105, 0x0107, 0x0109], [0x0106, 0x0108, 0x010A]);
+            var _entController = new Entry(2, 0x0122, [0x0123, 0x0125], [0x0124, 0x0126]);
+            var _entVibration = new Entry(2, 0xB71A, [0xB72A, 0xB752], [0xB72C, 0xB72D]);
+            var _entCommandKH2 = new Entry(2, 0xB71C, [0xB734, 0xB735], [0xB736, 0xB737]);
+            var _entDifficulty = new Entry(1, 0xB71D, [0xB738, 0xB739, 0xB73A, 0xCE30], [0xB73B, 0xB73C, 0xB73D, 0xCE31]);
 
-                Descriptions = new List<ushort>()
-                {
-                    0xB720,
-                    0xB721
-                }
-            };
-            var _entRightStick = new Entry()
-            {
-                Count = 2,
-                Title = 0xB718,
-
-                Buttons = new List<ushort>()
-                {
-                    0xB722,
-                    0xB723
-                },
-
-                Descriptions = new List<ushort>()
-                {
-                    0xB724,
-                    0xB725
-                }
-            };
-            var _entCameraV = new Entry()
-            {
-                Count = 2,
-                Title = 0xC2F5,
-                
-                Buttons = new List<ushort>()
-                {
-                    0xC2F8,
-                    0xC2F9
-                },
-
-                Descriptions = new List<ushort>()
-                {
-                    0xC2FA, 
-                    0xC2FB
-                }
-            };
-            var _entCameraH = new Entry()
-            {
-                Count = 2,
-                Title = 0xC2F6,
-                
-                Buttons = new List<ushort>()
-                {
-                    0xC2FC,
-                    0xC2FD
-                },
-
-                Descriptions = new List<ushort>()
-                {
-                    0xC2FE, 
-                    0xC2FF
-                }
-            };
-            var _entSummonFX = new Entry()
-            {
-                Count = 3,
-                Title = 0xC2F7,
-                
-
-                Buttons = new List<ushort>()
-                {
-                    0xC302,
-                    0xC300,
-                    0xC301
-                },
-
-                Descriptions = new List<ushort>()
-                {
-                    0xC305, 
-                    0xC303, 
-                    0xC304
-                }
-            };
-            var _entNavigation = new Entry()
-            {
-                Count = 2,
-                Title = 0xB719,
-                
-                Buttons = new List<ushort>()
-                {
-                    0xB726,
-                    0xB727
-                },
-
-                Descriptions = new List<ushort>()
-                {
-                    0xB728, 
-                    0xB729
-                }
-            };
-            var _entAutosave = new Entry()
-            {
-                Count = 3,
-                Title = 0x01BC,
-                
-                Buttons = new List<ushort>()
-                {
-                    0x01C1,
-                    0x01C2,
-                    0x01C3
-                },
-
-                Descriptions = new List<ushort>()
-                {
-                    0x01CD, 
-                    0x01CE, 
-                    0x01CF
-                }
-            };
-            var _entController = new Entry()
-            {
-                Count = 2,
-                Title = 0x01C0,
-                
-                Buttons = new List<ushort>()
-                {
-                    0x01CA,
-                    0x01CC
-                },
-
-                Descriptions = new List<ushort>()
-                {
-                    0x01D6, 
-                    0x01D8
-                }
-            };
-            var _entVibration = new Entry()
-            {
-                Count = 2,
-                Title = 0xB71A,
-                
-                Buttons = new List<ushort>()
-                {
-                    0xB72A,
-                    0xB752
-                },
-
-                Descriptions = new List<ushort>()
-                {
-                    0xB72C, 
-                    0xB72D
-                }
-            };
-            var _entCommandKH2 = new Entry()
-            {
-                Count = 3,
-                Title = 0xB71C,
-
-                Buttons = new List<ushort>()
-                {
-                    0xB734,
-                    0xB735,
-                    0x01CB
-                },
-
-                Descriptions = new List<ushort>()
-                {
-                    0xB736, 
-                    0xB737,
-                    0x01D7
-                }
-            };
-
-            var _entDifficulty = new Entry()
-            {
-                Count = 1,
-                Title = 0xB71D,
-
-                Buttons = new List<ushort>()
-                {
-                    0xB738,
-                    0xB739,
-                    0xB73A,
-                    0xCE30
-                },
-
-                Descriptions = new List<ushort>()
-                {
-                    0xB73B, 
-                    0xB73C, 
-                    0xB73D, 
-                    0xCE31
-                }
-            };
-           
             Children = new ObservableCollection<Entry>()
             {
                 _entFieldCam,
