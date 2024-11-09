@@ -8,6 +8,9 @@ namespace ReFined.KH2.InGame
 {
     public static class Operations
     {
+        public static IntPtr OffsetFindFile;
+        public static IntPtr OffsetGetFileSize;
+
         /// <summary>
         /// Fetches a string from a given MSG file.
         /// </summary>
@@ -136,7 +139,7 @@ namespace ReFined.KH2.InGame
         public static ulong FindFile(string Input)
         {
             var _memoryOffset = Hypervisor.PureAddress & 0x7FFF00000000;
-            var _returnValue = Variables.SharpHook[0x39C280].Execute<uint>(BSharpConvention.MicrosoftX64, Input, -1);
+            var _returnValue = Variables.SharpHook[OffsetFindFile].Execute<uint>(BSharpConvention.MicrosoftX64, Input, -1);
             return _returnValue == 0x00 ? 0x00 : _memoryOffset + _returnValue;
         }
 
@@ -145,7 +148,7 @@ namespace ReFined.KH2.InGame
         /// </summary>
         /// <param name="Input">The name of the file.</param>
         /// <returns>A 32-bit integer containing the size in bytes, "0" if the file is not found.</returns>
-        public static int GetFileSize(string Input) => Variables.SharpHook[0x39FD60].Execute<int>(Input);
+        public static int GetFileSize(string Input) => Variables.SharpHook[OffsetGetFileSize].Execute<int>(Input);
 
     }
 }
