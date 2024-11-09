@@ -1,12 +1,8 @@
-﻿using ReFined.Common;
-using ReFined.KH2.InGame;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+﻿using System.Text;
+
+using ReFined.Common;
 using ReFined.Libraries;
+using ReFined.KH2.InGame;
 
 namespace ReFined.KH2.Information
 {
@@ -47,13 +43,9 @@ namespace ReFined.KH2.Information
         /// </summary>
         public static void GenerateSave()
         {
-            // Prepare the pointers.
-            var _pointerBase = Hypervisor.Read<ulong>(Variables.PINT_SaveInformation);
-            var _pointerSecond = Hypervisor.Read<ulong>(_pointerBase + 0x10, true);
-
             // Prepare the strings.
             var _saveName = "BISLPM-66675FM-98";
-            var _savePath = Hypervisor.Read<char>(_pointerBase + 0x40, true) + "\\KHIIFM_WW.png";
+            var _savePath = Hypervisor.ReadString(Hypervisor.GetPointer64(Variables.PINT_SaveInformation, [0x40]), true) + "\\KHIIFM_WW.png";
 
             // Calculate the Unix Date.
             var _currDate = DateTime.Now;
@@ -65,8 +57,8 @@ namespace ReFined.KH2.Information
             var _saveInfoLength = 0x158;
             var _saveDataLength = 0x10FC0;
 
-            var _saveInfoStartRAM = _pointerSecond + 0x168;
-            var _saveDataStartRAM = _pointerSecond + 0x19630;
+            var _saveInfoStartRAM = Hypervisor.GetPointer64(Variables.PINT_SaveInformation, [0x10, 0x168]);
+            var _saveDataStartRAM = Hypervisor.GetPointer64(Variables.PINT_SaveInformation, [0x10, 0x19630]);
 
             var _saveInfoStartFILE = 0x1C8;
             var _saveDataStartFILE = 0x19690;
