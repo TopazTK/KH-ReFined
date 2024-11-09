@@ -255,16 +255,41 @@ namespace ReFined.KH2.Functions
         {
             if (Variables.IS_TITLE)
             {
-                var _readState = Hypervisor.Read<byte>(Variables.ADDR_NewGame, 0x20);
+                var _musicMode = Variables.CONFIG_BITWISE.OFF;
+                var _enemyMode = Variables.CONFIG_BITWISE.OFF;
 
-                var _vibration = _readState[0x04] == 0x00 ? Variables.CONFIG_BITWISE.VIBRATION : Variables.CONFIG_BITWISE.OFF;
+                var _readState = Hypervisor.Read<int>(0x820500, 0x100);
 
-                var _autoSave = _readState[0x08] == 0x00 ? Variables.CONFIG_BITWISE.AUTOSAVE_INDICATOR :
-                               (_readState[0x08] == 0x01 ? Variables.CONFIG_BITWISE.AUTOSAVE_SILENT : Variables.CONFIG_BITWISE.OFF);
+                var _vibration = _readState[0x01] == 0x00 ? Variables.CONFIG_BITWISE.VIBRATION : Variables.CONFIG_BITWISE.OFF;
 
-                var _controlPrompt = _readState[0x18] == 0x00 ? Variables.CONFIG_BITWISE.PROMPT_CONTROLLER : Variables.CONFIG_BITWISE.OFF;
+                var _autoSave = _readState[0x02] == 0x00 ? Variables.CONFIG_BITWISE.AUTOSAVE_INDICATOR :
+                               (_readState[0x02] == 0x01 ? Variables.CONFIG_BITWISE.AUTOSAVE_SILENT : Variables.CONFIG_BITWISE.OFF);
 
-                CONFIG_BIT = CONFIG_BIT | Variables.CONFIG_BITWISE.SUMMON_FULL | Variables.CONFIG_BITWISE.NAVI_MAP | _vibration | _autoSave | _controlPrompt;
+                var _controlPrompt = _readState[0x03] == 0x00 ? Variables.CONFIG_BITWISE.PROMPT_CONTROLLER : Variables.CONFIG_BITWISE.OFF;
+
+                if (!Variables.IS_LITE)
+                {
+                    var _addonOffset = 0;
+
+                    var _musicEntry = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x0135);
+                    var _enemyEntry = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x0136);
+
+                    if (_musicEntry != null)
+                    {
+                        _musicMode = _readState[0x04] == 0x00 ? Variables.CONFIG_BITWISE.MUSIC_VANILLA : Variables.CONFIG_BITWISE.OFF;
+                        _addonOffset++;
+                    }
+
+                    if (_enemyEntry != null)
+                    {
+                        _enemyMode = _readState[0x05] == 0x00 ? Variables.CONFIG_BITWISE.HEARTLESS_VANILLA: Variables.CONFIG_BITWISE.OFF;
+                        _addonOffset++;
+                    }
+
+                    Demand.SKIP_ROXAS = _readState[0x04 + _addonOffset] == 0x01 ? true : false;
+                }
+
+                CONFIG_BIT = CONFIG_BIT | Variables.CONFIG_BITWISE.SUMMON_FULL | Variables.CONFIG_BITWISE.NAVI_MAP | _vibration | _autoSave | _controlPrompt | _musicMode | _enemyMode;
             }
 
             if (!Variables.IS_TITLE && !CONFIG_WRITTEN)
@@ -277,6 +302,8 @@ namespace ReFined.KH2.Functions
 
                     Hypervisor.Write(Variables.ADDR_Config, CONFIG_BIT);
 
+                    Variables.MUSIC_VANILLA = CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.MUSIC_VANILLA);
+                    Variables.ENEMY_VANILLA = CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.HEARTLESS_VANILLA);
                     Variables.CONTROLLER_MODE = CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.PROMPT_CONTROLLER);
                     Variables.SAVE_MODE = CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.AUTOSAVE_INDICATOR) ? 0x00 : (CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.AUTOSAVE_SILENT) ? 0x01 : 0x02);
 
@@ -745,7 +772,7 @@ namespace ReFined.KH2.Functions
                         Terminal.Log("Switched into Retry, disabling functions.", 0);
 
                         Hypervisor.DeleteInstruction(WARP_OFFSET, 0x05);
-                        Hypervisor.RedirectInstruction(INVT_OFFSET, 0x7A0000);
+                        Hypervisor.RedirectLEA(INVT_OFFSET, 0x7A0000);
 
                         RETRY_MODE = 0x01;
                     }

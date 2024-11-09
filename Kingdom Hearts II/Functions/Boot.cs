@@ -81,6 +81,7 @@ namespace ReFined.KH2.Functions
                 Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroThird));
                 Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroFourth));
                 Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroFifth));
+                Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroSixth));
 
                 Variables.INTRO_MENU = new Intro();
                 Variables.CONFIG_MENU = new Config();
@@ -94,18 +95,28 @@ namespace ReFined.KH2.Functions
                     {
                         Terminal.Log("An enemy palette pack was located! Adding the options for it...", 0);
 
-                        var _entConfig = new Config.Entry(0x02, 0x011D, [0x011E, 0x0120], [0x011F, 0x0121]);
+                        var _entConfig = new Config.Entry(2, 0x011D, [0x011E, 0x0120], [0x011F, 0x0121]);
+                        var _entIntro = new Intro.Entry(2, 0x0136, 0x0000, [0x011E, 0x0120], [0x011F, 0x0121]);
+
                         Variables.CONFIG_MENU.Children.Insert(9, _entConfig);
+                        Variables.INTRO_MENU.Children.Insert(2, _entIntro);
+
                     }
 
                     if (Operations.GetFileSize("bgm/ps2md050.win32.scd") != 0x00)
                     {
                         Terminal.Log("A music pack was located! Adding the options for it...", 0);
 
-                        var _entConfig = new Config.Entry(0x02, 0x0118, [0x0119, 0x011B], [0x011A, 0x011C]);
+                        var _entConfig = new Config.Entry(2, 0x0118, [0x0119, 0x011B], [0x011A, 0x011C]);
+                        var _entIntro = new Intro.Entry(2, 0x0135, 0x0000, [0x0119, 0x011B], [0x011A, 0x011C]);
+
                         Variables.CONFIG_MENU.Children.Insert(9, _entConfig);
+                        Variables.INTRO_MENU.Children.Insert(2, _entIntro);
+
                     }
 
+                    var _entRoxas = new Intro.Entry(2, 0x0130, 0x0000, [0x0138, 0x0139], [0x0131, 0x0132]);
+                    Variables.INTRO_MENU.Children.Add(_entRoxas);
                 }
 
                 Variables.Source = new CancellationTokenSource();
