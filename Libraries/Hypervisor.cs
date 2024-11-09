@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace ReFined.Libraries
 {
@@ -231,6 +232,56 @@ namespace ReFined.Libraries
 
             else
                 WriteProcessMemory(Handle, _address, Value as byte[], Value.Length, ref _inWrite);
+        }
+
+        /// <summary>
+        /// Reads a terminated string from address.
+        /// </summary>
+        /// <param name="Address">The address which the value will be read from.</param>
+        /// <param name="Absolute">Whether the address is an absolute address or not. Defaults to false.</param>
+        /// <returns></returns>
+        public static string ReadString(ulong Address, bool Absolute = false)
+        {
+            IntPtr _address = (IntPtr)(PureAddress + Address);
+
+            if (Absolute)
+                _address = (IntPtr)(Address);
+
+            var _length = 0;
+
+            while (Read<byte>((ulong)(_address + _length), true) != 0x00)
+                _length++;
+
+            var _outArray = new byte[_length];
+            int _outRead = 0;
+
+            ReadProcessMemory(Handle, _address, _outArray, _length, ref _outRead);
+
+            return Encoding.Default.GetString(_outArray);
+        }
+
+        /// <summary>
+        /// Writes a string to an address.
+        /// </summary>
+        /// <param name="Address">The address which the value will be written to.</param>
+        /// <param name="Value">The string to write.</param>
+        /// <param name="Absolute">Whether the address is an absolute address or not. Defaults to false.</param>
+        public static void WriteString(ulong Address, string Value, bool Absolute = false, bool Unicode = false)
+        {
+            IntPtr _address = (IntPtr)(PureAddress + Address);
+
+            if (Absolute)
+                _address = (IntPtr)(Address);
+
+            int _inWrite = 0;
+
+            var _stringArray = Encoding.GetEncoding(437).GetBytes(Value);
+
+            if (Unicode)
+                _stringArray = Encoding.Unicode.GetBytes(Value);
+
+
+            WriteProcessMemory(Handle, _address, _stringArray, _stringArray.Length, ref _inWrite);
         }
 
         /// <summary>
