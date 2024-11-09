@@ -304,6 +304,9 @@ namespace ReFined.KH2.Functions
             var _settingsPoint = Hypervisor.Read<ulong>(Variables.PINT_ConfigMenu);
             var _difficultyRead = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x2498);
 
+            var _musicActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x0118);
+            var _enemyActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x011D);
+
             if (!Variables.IS_TITLE && !LOADED_SETTINGS)
             {
                 Terminal.Log("Fetching the config from the save file.", 0);
@@ -312,7 +315,6 @@ namespace ReFined.KH2.Functions
                 {
                     Variables.MUSIC_VANILLA = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.MUSIC_VANILLA);
                     Variables.ENEMY_VANILLA = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.HEARTLESS_VANILLA);
-                    Variables.AUDIO_MODE = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUDIO_JAPANESE) ? 0x01 : 0x00;
                 }
 
                 Variables.CONTROLLER_MODE = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.PROMPT_CONTROLLER);
@@ -323,12 +325,13 @@ namespace ReFined.KH2.Functions
                 LOADED_SETTINGS = true;
             }
 
-
             else if (Variables.IS_TITLE && LOADED_SETTINGS)
                 LOADED_SETTINGS = false;
 
             if (_menuRead == 0x24 && _pauseRead == 0x01 && _selectPoint != 0x00)
             {
+                var _liteOffset = 0x00;
+
                 if (_settingsPoint != 0x00 && !DEBOUNCE[6])
                 {
                     Terminal.Log("Config Menu has been opened! Setting up necessary stuff.", 0);
@@ -338,7 +341,7 @@ namespace ReFined.KH2.Functions
                     var _cameraAuto = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.FIELD_CAM) ? 0x01 : 0x00;
                     var _cameraHRev = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.CAMERA_H) ? 0x01 : 0x00;
                     var _cameraVRev = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.CAMERA_V) ? 0x01 : 0x00;
-                    var _commandKH2 = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.COMMAND_KH2) ? 0x01 : (_configBitwise.HasFlag(Variables.CONFIG_BITWISE.COMMAND_VLAD) ? 0x02 : 0x00);
+                    var _commandKH2 = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.COMMAND_KH2) ? 0x01 : 0x00;
                     var _vibrationOn = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.VIBRATION) ? 0x00 : 0x01;
                     var _summonEffect = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.SUMMON_PARTIAL) ? 0x00 : (_configBitwise.HasFlag(Variables.CONFIG_BITWISE.SUMMON_FULL) ? 0x01 : 0x02);
 
@@ -362,13 +365,19 @@ namespace ReFined.KH2.Functions
 
                     if (!Variables.IS_LITE)
                     {
-                        var _musicClassic = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.MUSIC_VANILLA) ? 0x00 : 0x01;
-                        var _heartlessClassic = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.HEARTLESS_VANILLA) ? 0x00 : 0x01;
-                        var _audioMode = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUDIO_JAPANESE) ? 0x01 : 0x00;
+                        if (_enemyActive != null)
+                        {
+                            var _heartlessClassic = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.HEARTLESS_VANILLA) ? 0x00 : 0x01;
+                            SETTINGS_READ.Insert(0x09, Convert.ToByte(_heartlessClassic));
+                            _liteOffset += 0x01;
+                        }
 
-                        SETTINGS_READ.Insert(0x09, Convert.ToByte(_heartlessClassic));
-                        SETTINGS_READ.Insert(0x09, Convert.ToByte(_musicClassic));
-                        SETTINGS_READ.Insert(0x09, Convert.ToByte(_audioMode));
+                        if (_musicActive != null)
+                        {
+                            var _musicClassic = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.MUSIC_VANILLA) ? 0x00 : 0x01;
+                            SETTINGS_READ.Insert(0x09, Convert.ToByte(_musicClassic));
+                            _liteOffset += 0x01;
+                        }
                     }
 
                     Hypervisor.Write(_settingsPoint, SETTINGS_READ.ToArray(), true);
@@ -384,8 +393,6 @@ namespace ReFined.KH2.Functions
                     ENTER_CONFIG = true;
 
                 SETTINGS_WRITE = Hypervisor.Read<byte>(_settingsPoint, SETTINGS_READ.Count(), true);
-
-                var _liteOffset = Variables.IS_LITE ? 0x00 : 0x03;
 
                 var _fieldCamBit = SETTINGS_WRITE[0x00] == 0x01 ? Variables.CONFIG_BITWISE.FIELD_CAM : Variables.CONFIG_BITWISE.OFF;
                 var _rightStickBit = SETTINGS_WRITE[0x01] == 0x01 ? Variables.CONFIG_BITWISE.RIGHT_STICK : Variables.CONFIG_BITWISE.OFF;
@@ -405,19 +412,16 @@ namespace ReFined.KH2.Functions
 
                 var _vibrationBit = SETTINGS_WRITE[0x08] == 0x00 ? Variables.CONFIG_BITWISE.VIBRATION : Variables.CONFIG_BITWISE.OFF;
 
-                var _audioBit = SETTINGS_WRITE[0x09] == 0x01 ? Variables.CONFIG_BITWISE.AUDIO_JAPANESE : Variables.CONFIG_BITWISE.OFF;
-                var _musicBit = SETTINGS_WRITE[0x0A] == 0x00 ? Variables.CONFIG_BITWISE.MUSIC_VANILLA : Variables.CONFIG_BITWISE.OFF;
-                var _enemyBit = SETTINGS_WRITE[0x0B] == 0x00 ? Variables.CONFIG_BITWISE.HEARTLESS_VANILLA : Variables.CONFIG_BITWISE.OFF;
+                var _commandBit = SETTINGS_WRITE[0x08 + _liteOffset] == 0x01 ? Variables.CONFIG_BITWISE.COMMAND_KH2 : Variables.CONFIG_BITWISE.OFF;
 
-                var _commandBit = SETTINGS_WRITE[0x09 + _liteOffset] == 0x01 ? Variables.CONFIG_BITWISE.COMMAND_KH2 : (SETTINGS_WRITE[0x08 + _liteOffset] == 0x02 ? Variables.CONFIG_BITWISE.COMMAND_VLAD : Variables.CONFIG_BITWISE.OFF);
-
+                var _musicBit = SETTINGS_WRITE[0x09] == 0x00 ? Variables.CONFIG_BITWISE.MUSIC_VANILLA : Variables.CONFIG_BITWISE.OFF;
+                var _enemyBit = SETTINGS_WRITE[0x0A] == 0x00 ? Variables.CONFIG_BITWISE.HEARTLESS_VANILLA : Variables.CONFIG_BITWISE.OFF;
 
                 Variables.SAVE_MODE = SETTINGS_WRITE[0x06];
                 Variables.CONTROLLER_MODE = SETTINGS_WRITE[0x07] == 0x00 ? true : false;
 
-                Variables.AUDIO_MODE = SETTINGS_WRITE[0x09];
-                Variables.MUSIC_VANILLA = SETTINGS_WRITE[0x0A] == 0x00 ? true : false;
-                Variables.ENEMY_VANILLA = SETTINGS_WRITE[0x0B] == 0x00 ? true : false;
+                Variables.MUSIC_VANILLA = SETTINGS_WRITE[0x09] == 0x00 ? true : false;
+                Variables.ENEMY_VANILLA = SETTINGS_WRITE[0x0A] == 0x00 ? true : false;
 
                 var _writeBitwise =
                     _fieldCamBit |
@@ -432,14 +436,17 @@ namespace ReFined.KH2.Functions
                     _commandBit;
 
                 if (!Variables.IS_LITE)
-                    _writeBitwise = _writeBitwise | _audioBit | _musicBit | _enemyBit;
+                    _writeBitwise = _writeBitwise | _musicBit | _enemyBit;
 
                 Hypervisor.Write(Variables.ADDR_Config, _writeBitwise);
             }
 
             else if (_selectPoint == 0x00 && ENTER_CONFIG && SETTINGS_READ != null && SETTINGS_WRITE != null)
             {
-                if (!SETTINGS_WRITE.SequenceEqual(SETTINGS_READ.ToArray()))
+                var _checkMusic = SETTINGS_WRITE[0x09] == SETTINGS_READ[0x09];
+                var _checkEnemy = SETTINGS_WRITE[0x0A] == SETTINGS_READ[0x0A];
+
+                if (!_checkMusic || !_checkEnemy)
                 {
                     LOCK_AUTOSAVE = true;
 
