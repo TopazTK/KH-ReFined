@@ -45,10 +45,10 @@ namespace ReFined.KH2.Functions
             if (_promptCheck != Variables.CONTROLLER_MODE)
             {
                 Terminal.Log("Switching to " + _promptString + " Prompt Mode.", 0);
-                Hypervisor.Write(PROMPT_OFFSET + 0x06, Variables.CONTROLLER_MODE);
+                Hypervisor.Write(PROMPT_OFFSET + 0x06, (byte)(Variables.CONTROLLER_MODE ? 0x00 : 0x01));
             }
 
-            Hypervisor.Write(Variables.ADDR_ControllerMode, Variables.CONTROLLER_MODE);
+            Hypervisor.Write(Variables.ADDR_ControllerMode, (byte)(Variables.CONTROLLER_MODE ? 0x00 : 0x01));
         }
 
 
