@@ -50,6 +50,9 @@ namespace ReFined.KH2.Functions
                 Critical.OffsetMapJump = Hypervisor.FindSignature(Variables.FUNC_MapJump);
                 Critical.OffsetSetFadeOff = Hypervisor.FindSignature(Variables.FUNC_SetFadeOff);
 
+                Operations.OffsetFindFile = Hypervisor.FindSignature(Variables.FUNC_FindFile);
+                Operations.OffsetGetFileSize = Hypervisor.FindSignature(Variables.FUNC_GetFileSize);
+
                 Sound.OffsetSound = Hypervisor.FindSignature(Variables.FUNC_PlaySFX);
 
                 Terminal.Log("Locating Hotfix Signatures...", 0);
@@ -73,72 +76,37 @@ namespace ReFined.KH2.Functions
                 Variables.HFIX_ConfigOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_ConfigFifth));
                 Variables.HFIX_ConfigOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_ConfigSixth));
 
+                Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroFirst));
+                Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroSecond));
+                Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroThird));
+                Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroFourth));
+                Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroFifth));
+
                 Variables.INTRO_MENU = new Intro();
                 Variables.CONFIG_MENU = new Config();
                 Variables.CONTINUE_MENU = new Continue();
 
                 if (!Variables.IS_LITE)
                 {
-                    Terminal.Log("Initializing Extra Options...", 0);
+                    Terminal.Log("Initializing Extra Options in the menus...", 0);
 
-                    var _entAudio = new Config.Entry()
+                    if (Operations.GetFileSize("obj/V_BB100.mdlx") != 0x00)
                     {
-                        Count = 2,
-                        Title = 0x01BD,
+                        Terminal.Log("An enemy palette pack was located! Adding the options for it...", 0);
 
-                        Buttons = new List<ushort>()
-                        {
-                            0x01C4,
-                            0x01C5
-                        },
+                        var _entConfig = new Config.Entry(0x02, 0x011D, [0x011E, 0x0120], [0x011F, 0x0121]);
+                        Variables.CONFIG_MENU.Children.Insert(9, _entConfig);
+                    }
 
-                        Descriptions = new List<ushort>()
-                        {
-                            0x01D0,
-                            0x01D1                      
-                        }
-                    };
-
-                    var _entMusic = new Config.Entry()
+                    if (Operations.GetFileSize("bgm/ps2md050.win32.scd") != 0x00)
                     {
-                        Count = 2,
-                        Title = 0x01BF,
+                        Terminal.Log("A music pack was located! Adding the options for it...", 0);
 
-                        Buttons = new List<ushort>()
-                        {
-                            0x01C6,
-                            0x01C7
-                        },
+                        var _entConfig = new Config.Entry(0x02, 0x0118, [0x0119, 0x011B], [0x011A, 0x011C]);
+                        Variables.CONFIG_MENU.Children.Insert(9, _entConfig);
+                    }
 
-                        Descriptions = new List<ushort>()
-                        {
-                            0x01D2,
-                            0x01D3
-                        }
-                    };
-                    var _entEnemy = new Config.Entry()
-                    {
-                        Count = 2,
-                        Title = 0x01BD,
-
-                        Buttons = new List<ushort>()
-                        {
-                            0x01C8,
-                            0x01C9
-                        },
-
-                        Descriptions = new List<ushort>()
-                        {
-                            0x01D4,
-                            0x01D5
-                        }
-                    };
-
-                    Variables.CONFIG_MENU.Children.Insert(9, _entEnemy);
-                    Variables.CONFIG_MENU.Children.Insert(9, _entMusic);
-                    Variables.CONFIG_MENU.Children.Insert(9, _entAudio);
                 }
-
 
                 Variables.Source = new CancellationTokenSource();
                 Variables.Token = Variables.Source.Token;
