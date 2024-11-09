@@ -149,7 +149,7 @@ namespace ReFined.KH2.Information
 
         public static ulong ADDR_Framerate = 0x71536E;
 
-        public static ulong ADDR_Framelimiter = 0x154620;
+        public static ulong ADDR_Framelimiter = 0xABAC08;
         public static ulong ADDR_ControllerMode = 0x2B44A88;
 
         public static ulong ADDR_ConfigMenu = 0x820000;
@@ -223,6 +223,8 @@ namespace ReFined.KH2.Information
         public static string FUNC_StopBGM = "40 53 48 83 EC 20 48 83 3D ?? ?? ?? ?? 00 0F 84 ?? ?? ?? ?? 48 8B 1D ?? ?? ?? ??";
         public static string FUNC_MapJump = "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 48 83 EC 20 80 3D ?? ?? ?? ?? 00 41 0F B6 E9";
         public static string FUNC_SetFadeOff = "48 83 EC 28 85 C9 79 0F 0F BA F1 1F 89 0D ?? ?? ?? ?? 48 83 C4 28 C3 89 0D ?? ?? ?? ?? 81 E1 FF FF FF 3F 0F 84 ?? ?? ?? ?? 83 E9 01";
+        public static string FUNC_FindFile = "48 89 5C 24 08 57 48 83 EC 20 8B DA 48 8B F9 45 33 C0 4D 85 C0 75 09 4C 8B 05 ?? ?? ?? ??";
+        public static string FUNC_GetFileSize = "40 53 48 81 EC 30 01 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 20 01 00 00 48 8D 15 ?? ?? ?? ??";
 
         //
         // HOTFIX SIGNATURES
@@ -243,7 +245,14 @@ namespace ReFined.KH2.Information
         public static string HFIX_ConfigFifth = "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 30 E8 ?? ?? ?? ?? 45 33 C0 33 C9 41 8D 50 FF E8 ?? ?? ?? ??";
         public static string HFIX_ConfigSixth = "40 53 55 56 57 41 54 41 55 41 56 41 57 48 83 EC 58 E8 ?? ?? ?? ?? 48 8B 0D ?? ?? ?? ?? 4C 8B F8 E8 ?? ?? ?? ?? 41 BD ?? ?? ?? ??";
 
+        public static string HFIX_IntroFirst = "48 89 5C 24 18 55 56 57 41 54 41 55 41 56 41 57 48 83 EC 50 48 8B 05 ?? ?? ?? ??";
+        public static string HFIX_IntroSecond = "48 89 5C 24 20 55 56 57 41 54 41 55 41 56 41 57 48 83 EC 50 4C 8B 3D ?? ?? ?? ??";
+        public static string HFIX_IntroThird = "40 53 48 83 EC 20 48 8B 0D ?? ?? ?? ?? 48 81 C1 40 04 00 00 E8 ?? ?? ?? ??";
+        public static string HFIX_IntroFourth = "48 83 EC 38 48 8B 0D ?? ?? ?? ?? 48 89 5C 24 40 48 85 C9 74 27 E8 ?? ?? ?? ??";
+        public static string HFIX_IntroFifth = "48 89 5C 24 10 57 48 83 EC 40 48 8B 05 ?? ?? ?? ?? 80 78 0C 00 74 18 E8 ?? ?? ?? ??";
+
         public static List<ulong> HFIX_ConfigOffsets = new List<ulong>();
+        public static List<ulong> HFIX_IntroOffsets = new List<ulong>();
 
         //
         // VALUE DUMP
@@ -286,9 +295,9 @@ namespace ReFined.KH2.Information
             SUMMON_PARTIAL = 0x0200,
             SUMMON_FULL = 0x0400,
             AUDIO_JAPANESE = 0x0800,
-            MUSIC_VANILLA = 0x1000,
+            AUDIO_OTHER = 0x1000,
             PROMPT_CONTROLLER = 0x2000,
-            COMMAND_VLAD = 0x4000,
+            MUSIC_VANILLA = 0x4000,
             HEARTLESS_VANILLA = 0x8000
         }
     }
