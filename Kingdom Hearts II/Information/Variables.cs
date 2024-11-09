@@ -250,6 +250,7 @@ namespace ReFined.KH2.Information
         public static string HFIX_IntroThird = "40 53 48 83 EC 20 48 8B 0D ?? ?? ?? ?? 48 81 C1 40 04 00 00 E8 ?? ?? ?? ??";
         public static string HFIX_IntroFourth = "48 83 EC 38 48 8B 0D ?? ?? ?? ?? 48 89 5C 24 40 48 85 C9 74 27 E8 ?? ?? ?? ??";
         public static string HFIX_IntroFifth = "48 89 5C 24 10 57 48 83 EC 40 48 8B 05 ?? ?? ?? ?? 80 78 0C 00 74 18 E8 ?? ?? ?? ??";
+        public static string HFIX_IntroSixth = "48 89 5C 24 20 56 57 41 56 48 83 EC 30 E8 ?? ?? ?? ?? 48 8B C8 E8 ?? ?? ?? ??";
 
         public static List<ulong> HFIX_ConfigOffsets = new List<ulong>();
         public static List<ulong> HFIX_IntroOffsets = new List<ulong>();
