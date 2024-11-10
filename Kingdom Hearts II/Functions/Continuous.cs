@@ -13,6 +13,19 @@ namespace ReFined.KH2.Functions
 
         public static byte[]? LIMITER_FUNCTION = null;
 
+        public static void ToggleWarpGOA()
+        {
+            var _flagRead = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x1EF6);
+            var _goaVisit = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x231B);
+            var _worldRead = Hypervisor.Read<byte>(Variables.ADDR_Area);
+
+            if (_worldRead == 0x0F && (_goaVisit & 0x04) == 0x04 && (_flagRead & 0x40) == 0x00)
+                Hypervisor.Write(Variables.ADDR_SaveData + 0x1EF6, (byte)(_flagRead + 0x40));
+
+            else if (_worldRead != 0x0F && (_flagRead & 0x40) == 0x40)
+                Hypervisor.Write(Variables.ADDR_SaveData + 0x1EF6, (byte)(_flagRead - 0x40));
+        }
+
         public static void ToggleLimiter()
         {
             if (LIMITER_FUNCTION == null)
