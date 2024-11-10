@@ -15,10 +15,6 @@ namespace ReFined.KH2.Functions
 
         static bool[] DEBOUNCE = new bool[0x20];
 
-        /// <summary>
-        /// When the proper input is given, returns to the title screen.
-        /// When the option for it is toggled, prompts the user for a cancellation.
-        /// </summary>
         public static void TriggerReset()
         {
             var _currentTime = DateTime.Now;
@@ -88,9 +84,41 @@ namespace ReFined.KH2.Functions
             }
         }
 
-        /// <summary>
-        /// When it's chosen as a new game begins, this logic will skip the Roxas Prologue.
-        /// </summary>
+        public static void TriggerEncounter()
+        {
+            // The pointer for the current room's enemy information.
+            var _roomPoint = Hypervisor.Read<ulong>(Variables.PINT_EnemyInfo) + 0x08;
+
+            // Reading the current values into memory.
+            var _roomRead = Hypervisor.Read<byte>(Variables.ADDR_LoadFlag);
+            var _abilityRead = Hypervisor.Read<ushort>(Variables.ADDR_SaveData + 0x2544, 0x60);
+
+            // Check if the game is loaded, and if the player has Encounter Plus in anyway.
+            if (!Variables.IS_TITLE && _roomRead == 0x01 && !DEBOUNCE[2] && !_abilityRead.Contains<ushort>(0x80F8) && !_abilityRead.Contains<ushort>(0x00F8))
+            {
+                // If not, give them the ability.
+                var _fetchIndex = Array.FindIndex(_abilityRead, x => x == 0x0000);
+
+                Terminal.Log("Encounter Plus has been added to the inventory!", 0);
+
+                Hypervisor.Write<ushort>(Variables.ADDR_SaveData + 0x2544 + (ulong)(_fetchIndex * 0x02), 0x00F8);
+                DEBOUNCE[2] = true;
+            }
+
+            else if (Variables.IS_TITLE && DEBOUNCE[2])
+                DEBOUNCE[2] = false;
+
+            if (_roomRead == 0x00 && _abilityRead.Contains<ushort>(0x80F8) && !DEBOUNCE[3] && Critical.AREA_READ == null)
+            {
+                Terminal.Log("Enemy data has been cleared!", 0);
+                Hypervisor.Write(_roomPoint, new byte[0x100], true);
+                DEBOUNCE[3] = true;
+            }
+
+            else if (_roomRead == 0x01 && DEBOUNCE[3])
+                DEBOUNCE[3] = false;
+        }
+
         public static void TriggerPrologueSkip()
         {
             var _diffRead = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x2498);
@@ -122,6 +150,8 @@ namespace ReFined.KH2.Functions
                     if (SKIP_ROXAS)
                     {
                         Terminal.Log("Room and Settings are correct! Initiating Roxas Skip's First Phase...", 0);
+
+                        Critical.LOCK_AUTOSAVE = true;
 
                         Hypervisor.Write(Variables.ADDR_Area, 0x322002);
                         Hypervisor.Write(Variables.ADDR_Area + 0x04, 0x01);
@@ -611,6 +641,8 @@ namespace ReFined.KH2.Functions
 
                     Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x36C7, 0x80);
                     Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x36C9, 0x80);
+
+                    Critical.LOCK_AUTOSAVE = false;
 
                     Terminal.Log("Roxas Skip has been completed!", 0);
                     SKIP_STAGE = 2;

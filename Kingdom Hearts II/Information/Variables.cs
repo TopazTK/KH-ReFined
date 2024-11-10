@@ -192,6 +192,7 @@ namespace ReFined.KH2.Information
         public static ulong PINT_GameOverOptions = 0x2A11360;
 
         public static ulong PINT_ChildMenu = 0x2A11118;
+        public static ulong PINT_EnemyInfo = 0x2A0CD70;
 
         //
         // RPC ASSET LIBRARY
