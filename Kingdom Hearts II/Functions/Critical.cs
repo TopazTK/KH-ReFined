@@ -26,6 +26,7 @@ namespace ReFined.KH2.Functions
         public static byte[]? INVT_FUNCTION;
 
         static Variables.CONFIG_BITWISE CONFIG_BIT;
+        static bool CONFIG_TOGGLE;
         static bool CONFIG_WRITTEN;
 
         static bool[] DEBOUNCE = new bool[0x20];
@@ -43,7 +44,7 @@ namespace ReFined.KH2.Functions
         static byte[]? SETTINGS_WRITE;
 
         static bool ENTER_CONFIG;
-        static bool LOCK_AUTOSAVE;
+        public static bool LOCK_AUTOSAVE;
 
         static bool STATE_COPIED;
         static byte HADES_COUNT;
@@ -53,7 +54,7 @@ namespace ReFined.KH2.Functions
         static bool RETRY_BLOCK;
 
         static byte[] MAGIC_STORE;
-        static byte[] AREA_READ;
+        public static byte[] AREA_READ;
 
         static uint[] MAGIC_OFFSET = [0x1B1, 0x295, 0x2BD, 0x30C, 0x33C];
         static List<byte[]> MAGIC_INST;
@@ -258,8 +259,19 @@ namespace ReFined.KH2.Functions
 
         public static void HandleIntro()
         {
+            var _selectButton = Hypervisor.Read<byte>(0xB1D5E4);
+
+            CONFIG_TOGGLE = _selectButton == 0x00 ? true : false;
+
             if (Variables.IS_TITLE)
             {
+                if (CONFIG_WRITTEN)
+                {
+                    Terminal.Log("Back on Title Screen! Flushing Intro configuration...", 0x00);
+                    CONFIG_BIT = 0x00;
+                    CONFIG_WRITTEN = false;
+                }
+
                 var _musicMode = Variables.CONFIG_BITWISE.OFF;
                 var _enemyMode = Variables.CONFIG_BITWISE.OFF;
 
@@ -276,16 +288,16 @@ namespace ReFined.KH2.Functions
                 {
                     var _addonOffset = 0;
 
-                    var _musicEntry = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x0135);
-                    var _enemyEntry = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x0136);
+                    var _musicActive = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x0135) == null ? false : true;
+                    var _enemyActive = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x0136) == null ? false : true;
 
-                    if (_musicEntry != null)
+                    if (_musicActive)
                     {
                         _musicMode = _readState[0x04] == 0x00 ? Variables.CONFIG_BITWISE.MUSIC_VANILLA : Variables.CONFIG_BITWISE.OFF;
                         _addonOffset++;
                     }
 
-                    if (_enemyEntry != null)
+                    if (_enemyActive)
                     {
                         _enemyMode = _readState[0x05] == 0x00 ? Variables.CONFIG_BITWISE.HEARTLESS_VANILLA: Variables.CONFIG_BITWISE.OFF;
                         _addonOffset++;
@@ -294,10 +306,10 @@ namespace ReFined.KH2.Functions
                     Demand.SKIP_ROXAS = _readState[0x04 + _addonOffset] == 0x01 ? true : false;
                 }
 
-                CONFIG_BIT = CONFIG_BIT | Variables.CONFIG_BITWISE.SUMMON_FULL | Variables.CONFIG_BITWISE.NAVI_MAP | _vibration | _autoSave | _controlPrompt | _musicMode | _enemyMode;
+                CONFIG_BIT = Variables.CONFIG_BITWISE.SUMMON_FULL | Variables.CONFIG_BITWISE.NAVI_MAP | _vibration | _autoSave | _controlPrompt | _musicMode | _enemyMode;
             }
 
-            if (!Variables.IS_TITLE && !CONFIG_WRITTEN)
+            if (!Variables.IS_TITLE && !CONFIG_WRITTEN && CONFIG_TOGGLE)
             {
                 var _areaRead = Hypervisor.Read<uint>(Variables.ADDR_Area);
 
@@ -312,12 +324,6 @@ namespace ReFined.KH2.Functions
                     Variables.CONTROLLER_MODE = CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.PROMPT_CONTROLLER);
                     Variables.SAVE_MODE = CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.AUTOSAVE_INDICATOR) ? 0x00 : (CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.AUTOSAVE_SILENT) ? 0x01 : 0x02);
 
-                    CONFIG_WRITTEN = true;
-                }
-
-                else
-                {
-                    Terminal.Log("Intro Handler detected a game load! Skipping config writing..", 0);
                     CONFIG_WRITTEN = true;
                 }
             }
@@ -336,8 +342,8 @@ namespace ReFined.KH2.Functions
             var _settingsPoint = Hypervisor.Read<ulong>(Variables.PINT_ConfigMenu);
             var _difficultyRead = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x2498);
 
-            var _musicActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x0118);
-            var _enemyActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x011D);
+            var _musicActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x0118) == null ? false : true;
+            var _enemyActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x011D) == null ? false : true;
 
             if (!Variables.IS_TITLE && !LOADED_SETTINGS)
             {
@@ -397,14 +403,14 @@ namespace ReFined.KH2.Functions
 
                     if (!Variables.IS_LITE)
                     {
-                        if (_enemyActive != null)
+                        if (_enemyActive)
                         {
                             var _heartlessClassic = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.HEARTLESS_VANILLA) ? 0x00 : 0x01;
                             SETTINGS_READ.Insert(0x09, Convert.ToByte(_heartlessClassic));
                             _liteOffset += 0x01;
                         }
 
-                        if (_musicActive != null)
+                        if (_musicActive)
                         {
                             var _musicClassic = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.MUSIC_VANILLA) ? 0x00 : 0x01;
                             SETTINGS_READ.Insert(0x09, Convert.ToByte(_musicClassic));
@@ -669,7 +675,7 @@ namespace ReFined.KH2.Functions
             var _entPrepare = new Continue.Entry()
             {
                 Opcode = 0x0002,
-                Label = 0x01DE,
+                Label = 0x0127,
             };
 
             var _isEscape = _worldRead == 0x06 && _roomRead == 0x05 && _eventRead == 0x6F;
