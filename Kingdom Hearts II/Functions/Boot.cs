@@ -27,7 +27,7 @@ namespace ReFined.KH2.Functions
 
                 _versionString = Variables.IS_LITE ? "Re:Freshed" : "Re:Fined";
 
-                Terminal.Log("Welcome to " + _versionString + " Patreon BETA v0.50!", 0);
+                Terminal.Log("Welcome to " + _versionString + " Patreon BETA v0.75!", 0);
                 Terminal.Log("Please be patient while " + _versionString + " initializes.", 0);
 
                 Terminal.Log("Initializing SharpHook...", 0);
@@ -89,6 +89,18 @@ namespace ReFined.KH2.Functions
                 Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroSixth));
                 Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroSeventh));
 
+                if (Operations.GetFileSize("itempic/item-271.imd") == 0x00)
+                {
+                    Terminal.Log("The Re:Fined Main Patch is either not installed or not detected! Please ensure you have installed \"KH-ReFined/KH2-MAIN\" and try again. Re:Fined will now terminate.", 0x02);
+                    Environment.Exit(0);
+                }
+
+                if (Operations.GetFileSize("03system.bin") == 0x00)
+                {
+                    Terminal.Log("03system.bin is corrupted! This can be caused by not extracting the game before installation. Please reinstall the patch and try again. Re:Fined will now terminate.", 0x02);
+                    Environment.Exit(0);
+                }
+
                 Variables.INTRO_MENU = new Intro();
                 Variables.CONFIG_MENU = new Config();
                 Variables.CONTINUE_MENU = new Continue();
@@ -108,7 +120,6 @@ namespace ReFined.KH2.Functions
 
                         Variables.CONFIG_MENU.Children.Insert(9, _entConfig);
                         Variables.INTRO_MENU.Children.Insert(2, _entIntro);
-
                     }
 
                     if (Operations.GetFileSize("bgm/ps2md050.win32.scd") != 0x00)
@@ -120,7 +131,6 @@ namespace ReFined.KH2.Functions
 
                         Variables.CONFIG_MENU.Children.Insert(9, _entConfig);
                         Variables.INTRO_MENU.Children.Insert(2, _entIntro);
-
                     }
 
                     var _entRoxas = new Intro.Entry(2, 0x0130, 0x0000, [0x0138, 0x0139], [0x0131, 0x0132]);
