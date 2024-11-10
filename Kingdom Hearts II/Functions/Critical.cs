@@ -17,6 +17,11 @@ namespace ReFined.KH2.Functions
         public static ulong INVT_OFFSET;
         public static ulong CMD_OFFSET;
 
+        public static ulong ICON_OFFSET;
+        public static ulong LIST_OFFSET;
+        public static ulong EQUIP_OFFSET;
+        public static ulong CATEGORY_OFFSET;
+
         public static byte[]? WARP_FUNCTION;
         public static byte[]? INVT_FUNCTION;
 
@@ -505,7 +510,7 @@ namespace ReFined.KH2.Functions
 
                     // Initiate the jump.
                     Hypervisor.Write(Variables.ADDR_Area, _newArray);
-                    Variables.SharpHook[OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Hypervisor.PureAddress + Variables.ADDR_Area), 2, 0, 0, 0);
+                    Variables.SharpHook[OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Variables.ADDR_Area), 2, 0, 0, 0);
 
                     // Wait until the fade has been completed.
                     while (Hypervisor.Read<byte>(0xABB3C7) != 0x80) ;
@@ -524,7 +529,7 @@ namespace ReFined.KH2.Functions
 
                     // Atfer load, jump back to where we came from.
                     Hypervisor.Write(Variables.ADDR_Area, AREA_READ);
-                    Variables.SharpHook[OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Hypervisor.PureAddress + Variables.ADDR_Area), 2, 0, 0, 0);
+                    Variables.SharpHook[OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Variables.ADDR_Area), 2, 0, 0, 0);
 
                     // Wait until load.
                     while (Hypervisor.Read<byte>(Variables.ADDR_LoadFlag) != 1) ;
@@ -823,6 +828,55 @@ namespace ReFined.KH2.Functions
                 Terminal.Log("Blacklisted area have been detected. Retry functionality has been disabled.", 0);
 
                 RETRY_BLOCK = true;
+            }
+        }
+
+        public static void HandleFormShortcuts()
+        {
+            var _parityCheck = Hypervisor.Read<byte>(ICON_OFFSET + 0x1A);
+
+            if (Variables.FORM_SHORTCUT && _parityCheck != 0xEB)
+            {
+                // This reads part of the actual instruction which handles drive icons on shortcuts to move it.
+                var _copyInst = Hypervisor.Read<byte>(ICON_OFFSET + 0x1D, 0x19);
+
+                // This writes a JMP statement to trigger an alternative condition.
+                Hypervisor.Write<byte>(ICON_OFFSET + 0x1A, [0xEB, 0x19]);
+
+                // Move the instruction.
+                Hypervisor.Write(ICON_OFFSET + 0x1C, _copyInst);
+
+                // Write the check for the improper icon, and correct it.
+                Hypervisor.Write<byte>(ICON_OFFSET + 0x35, [0x3C, 0x0B, 0x75, 0x02, 0xB0]);
+                Hypervisor.Write<byte>(ICON_OFFSET + 0x3B, [0x88, 0x47, 0x01, 0xEB, 0xDC]);
+
+                // Write what icon it should be corrected to.
+                Hypervisor.Write<byte>(ICON_OFFSET + 0x3A, 0xCE);
+
+                // Adjustments to the shortcut filter mechanism to show the drives in the list:
+                // This one jumps out to a interrupt block so that we can inject code.
+                Hypervisor.Write<byte>(LIST_OFFSET + 0x138, [0xEB, 0x4E, 0x90, 0x90]);
+
+                // This one performs an OR operation and inserts the bit value 0x240000 so that
+                // both Drive Forms (0x200000) and Magic (0x40000) can show up.
+                Hypervisor.Write<byte>(LIST_OFFSET + 0x188, [0x81, 0xCB, 0x00, 0x00, 0x24, 0x00]);
+
+                // This jumps out of the interrupt block and continues execution.
+                Hypervisor.Write<byte>(LIST_OFFSET + 0x18E, [0xEB, 0xAA]);
+
+                // Adjustments to the equip filter mechanism to actually equip the shortcuts.
+                // This one wipes out the false condition and jumps out to a interrupt block so that we can inject code.
+                Hypervisor.Write<byte>(EQUIP_OFFSET + 0x16, [0xEB, 0x1B, 0x90, 0x90, 0x90, 0x90, 0x90]);
+
+                // This one performs a check for Drive Forms, if true, it jumps to the code that 
+                // handles non-magic shortcuts and their memorizaiton. 
+                Hypervisor.Write<byte>(EQUIP_OFFSET + 0x33, [0x80, 0xF9, 0x15, 0x74, 0xF2]);
+
+                // This re-implements the false condition.
+                Hypervisor.Write<byte>(EQUIP_OFFSET + 0x38, [0x31, 0xC0, 0x48, 0x83, 0xC4, 0x28, 0xC3]);
+
+                // This NOPs a jump statement which causes the equipped drive to be treated as a spell.
+                Hypervisor.DeleteInstruction(CATEGORY_OFFSET + 0x4AF, 0x02);
             }
         }
     }
