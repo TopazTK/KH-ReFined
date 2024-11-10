@@ -109,6 +109,8 @@ namespace ReFined.KH2.Functions
                 var _roomCheck = Hypervisor.Read<byte>(Variables.ADDR_Area + 0x01);
                 var _eventCheck = Hypervisor.Read<byte>(Variables.ADDR_Area + 0x04);
 
+                var _cutsceneCheck = Hypervisor.Read<byte>(Variables.ADDR_CutsceneFlag);
+
                 if (_selectButton == 0x00 && SKIP_STAGE == 3)
                 {
                     Terminal.Log("Loaded game abandoned. Re-enabling Roxas Skip!", 0);
@@ -125,9 +127,21 @@ namespace ReFined.KH2.Functions
                         Hypervisor.Write(Variables.ADDR_Area + 0x04, 0x01);
                         Hypervisor.Write(Variables.ADDR_Area + 0x08, 0x01);
 
+                        // Wait until the fade has been completed.
+                        while (Hypervisor.Read<byte>(0xABB3C7) != 0x80) ;
+
+                        // Destroy the fade handler so it does not cause issues.
+                        Hypervisor.DeleteInstruction((ulong)(Critical.OffsetSetFadeOff + 0x81A), 0x08);
+                        Hypervisor.Write<byte>(0xABB3C7, 0x80);
+
                         while (Hypervisor.Read<byte>(Variables.ADDR_LoadFlag) == 0x00) ;
 
                         Variables.SharpHook[Critical.OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Hypervisor.PureAddress + Variables.ADDR_Area), 2, 0, 0, 0);
+
+                        while (Hypervisor.Read<byte>(Variables.ADDR_LoadFlag) == 0x00) ;
+
+                        // Restore the fade initiater after load.
+                        Hypervisor.Write<byte>((ulong)(Critical.OffsetSetFadeOff + 0x81A), [0xF3, 0x0F, 0x11, 0x8F, 0x0C, 0x01, 0x00, 0x00]);
 
                         Hypervisor.Write(Variables.ADDR_SaveData + 0x1CD0, 0x1FF00001);
                         Hypervisor.Write(Variables.ADDR_SaveData + 0x1CD4, 0x00000000);
@@ -142,17 +156,369 @@ namespace ReFined.KH2.Functions
                     }
                 }
 
-                else if (_worldCheck == 0x02 && _roomCheck == 0x20 && _eventCheck == 0x9A && SKIP_STAGE == 1)
+                else if (_worldCheck == 0x02 && _roomCheck == 0x20 && _eventCheck == 0x01 && _cutsceneCheck == 0x01 && SKIP_STAGE == 1)
                 {
+                    Thread.Sleep(1000);
+
                     Terminal.Log("Room parameters correct! Skip was initiated! Initiating Roxas Skip's Second Phase...", 0);
 
-                    Hypervisor.Write<uint>(Variables.ADDR_Area, 0x001702);
-                    Hypervisor.Write<uint>(Variables.ADDR_Area + 0x04, (0x02 << 10) + 0x02);
-                    Hypervisor.Write<uint>(Variables.ADDR_Area + 0x08, 0x02);
+                    Hypervisor.Write<uint>(Variables.ADDR_Area, 0x00320E02);
+                    Hypervisor.Write<uint>(Variables.ADDR_Area + 0x04, 0x02);
+                    Hypervisor.Write<uint>(Variables.ADDR_Area + 0x08, 0x12);
 
                     while (Hypervisor.Read<byte>(Variables.ADDR_LoadFlag) == 0x00) ;
 
                     Variables.SharpHook[Critical.OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Hypervisor.PureAddress + Variables.ADDR_Area), 2, 0, 0, 0);
+
+                    // Look. Imma be honest with ya. All THIS to skip just *ONE* cutscene may not be worth it.
+                    // Buth damn does it make the transition E X T R E M E L Y smooth.
+
+                    Hypervisor.Write(
+                        Variables.ADDR_SaveData + 0x31C,
+                        new byte[]
+                        {
+                           0x04,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x04,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x05,
+                           0x00,
+                           0x04,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x12,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x04,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x12,
+                           0x00,
+                           0x04,
+                           0x00,
+                           0x15,
+                           0x00,
+                           0x12,
+                           0x00,
+                           0x04,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x12,
+                           0x00,
+                           0x04,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x12,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x12,
+                           0x00,
+                           0x04,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x12,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x12,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x12,
+                           0x00,
+                           0x02,
+                           0x00,
+                           0x00,
+                           0x00,
+                           0x12
+                        });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x03E8, 0x04);
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x03EE, 0x04);
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x1CE2, 0x67);
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x20E4, 0xCB75CB74);
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x20F4, 0x9F609F4D);
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x2120, 0xC54BC54A);
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x23EE, 0x01);
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x2444, 0x098A);
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x2454, 0x0989);
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x353D, 0x00120201);
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x3FF5, 0x00000107);
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x41A8, 0x0A);
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x41AD, 0x0202);
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x41B1, 0x08);
+
+                    Hypervisor.Write(
+                        Variables.ADDR_SaveData + 0x4278, 
+                        new byte[]
+                        {
+                            0xF8,
+                            0x00,
+                            0x89,
+                            0x01,
+                            0x88,
+                            0x01,
+                            0xA5,
+                            0x01,
+                            0x94,
+                            0x01,
+                            0x97,
+                            0x01,
+                            0x95,
+                            0x01,
+                            0x52,
+                            0x00,
+                            0x8A,
+                            0x00,
+                            0x9E,
+                            0x00,
+                            0x00,
+                            0x00,
+                            0x00,
+                            0x00,
+                            0x00,
+                            0x00,
+                        });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x4318, 0x00A800A7);
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x4378, 0x019B01AD);
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x43D8, 0x008A00A3);
+
+                    Hypervisor.Write(
+                        Variables.ADDR_SaveData + 0x4438, 
+                        new byte[]
+                        {
+                            0xCC,
+                            0x00,
+                            0xAC,
+                            0x01,
+                            0xB0,
+                            0x00,
+                            0xA1,
+                            0x01,
+                            0x9C,
+                            0x01,
+                            0x9D,
+                            0x01,
+                            0xA0,
+                            0x01
+                        });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x4498, 0x0195019B);
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x44F8,
+                        new short[]
+                        {
+                            0x00CB,
+                            0x01AA,
+                            0x01AB,
+                            0x01A1,
+                            0x019B,
+                            0x0196,
+                            0x019D,
+                            0x01A0,
+                            0x01A2
+                        });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x4558,
+                        new short[]
+                        {
+                            0x00D2,
+                            0x01BE,
+                            0x01BF,
+                            0x01C0,
+                            0x01A1,
+                            0x019B,
+                            0x0195,
+                            0x0197,
+                            0x019E,
+                            0x01A4
+                        });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x45B8,
+                        new short[]
+                        {
+                            0x00CD,
+                            0x00B1,
+                            0x01AE,
+                            0x01A1,
+                            0x019B,
+                            0x019F,
+                            0x019E,
+                            0x01A3
+                        });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x4618,
+                       new short[]
+                       {
+                            0x00CE,
+                            0x00AF,
+                            0x01B0,
+                            0x01B1,
+                            0x01A1,
+                            0x01A5,
+                            0x01A4,
+                            0x0197,
+                            0x0198,
+                            0x0199,
+                            0x019A
+                       });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x4678,
+                       new short[]
+                       {
+                            0x00D1,
+                            0x01B7,
+                            0x01B8,
+                            0x00BE,
+                            0x01A1,
+                            0x019C,
+                            0x019E,
+                            0x01A3,
+                            0x01A4
+                       });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x46D8,
+                       new short[]
+                       {
+                            0x019B,
+                            0x0196,
+                            0x01A2
+                       });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x4738,
+                       new short[]
+                       {
+                            0x00D0,
+                            0x01B6,
+                            0x01B4,
+                            0x00BB,
+                            0x01A1,
+                            0x019B,
+                            0x019E,
+                            0x019F,
+                            0x01A0,
+                            0x01A6,
+                            0x01A3
+                       });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x4798,
+                       new short[]
+                       {
+                            0x005E,
+                            0x00D8,
+                            0x00D9,
+                            0x00DA,
+                            0x00DB,
+                            0x00F6,
+                            0x00F7,
+                            0x0111,
+                            0x00DF,
+                            0x00A2,
+                            0x00A3
+                       });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x47F8,
+                       new short[]
+                       {
+                            0x0062,
+                            0x00DC,
+                            0x00DD,
+                            0x00E0,
+                            0x00E1,
+                            0x0111,
+                            0x01A6
+                       });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x4858,
+                       new short[]
+                       {
+                            0x0234,
+                            0x0239,
+                            0x023A,
+                            0x023B,
+                            0x023C,
+                            0x023D,
+                            0x023E,
+                            0x023F,
+                            0x024B,
+                            0x024C,
+                            0x024D,
+                            0x0052,
+                            0x0106,
+                            0x0108,
+                            0x010D,
+                            0x019C,
+                            0x0195,
+                            0x0197,
+                            0x019D
+                       });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x048B8,
+                       new short[]
+                       {
+                            0x0066,
+                            0x0101,
+                            0x0102,
+                            0x0105,
+                            0x00DF,
+                            0x0103,
+                            0x01A5,
+                            0x00A3,
+                            0x0195
+                       });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x4918,
+                       new short[]
+                       {
+                            0x006A,
+                            0x0207,
+                            0x00DD,
+                            0x00DF,
+                            0x020F,
+                            0x0210,
+                            0x0211,
+                            0x0212,
+                            0x019D
+                       });
+
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0x4978,
+                       new short[]
+                       {
+                            0x00A2,
+                            0x00A3,
+                            0x0208,
+                            0x0209,
+                            0x020A,
+                            0x020B
+                       });
 
                     Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x239E, 0x9F);
                     Hypervisor.Write(
