@@ -351,6 +351,19 @@ namespace ReFined.Libraries
             var _instMath = Destination - _instEnding;
             Write(Address + 0x02, BitConverter.GetBytes(_instMath), Absolute);
         }
+                
+        /// <summary>
+        /// Redirects a CMP instruction to another address. Given it expects a relative pointer.
+        /// </summary>
+        /// <param name="Address">The instruction address.</param>
+        /// <param name="Destination">The address in memory it will be reditected to.</param>
+        /// <param name="Absolute">If the address is absolute, false by default.</param>
+        public static void RedirectCMP(ulong Address, uint Destination, bool Absolute = false)
+        {
+            var _instEnding = (uint)Address + 0x07;
+            var _instMath = Destination - _instEnding;
+            Write(Address + 0x02, BitConverter.GetBytes(_instMath), Absolute);
+        }
 
         /// <summary>
         /// NOPs an instruction, given it's length.

@@ -138,6 +138,9 @@ namespace ReFined.KH2.Menus
             Hypervisor.RedirectLEA(Variables.HFIX_IntroOffsets[4] + 0x1F2, 0x820500);
             Hypervisor.RedirectMOV(Variables.HFIX_IntroOffsets[5] + 0x2BF, 0x820500);
 
+            Hypervisor.RedirectMOV(Variables.HFIX_IntroOffsets[6] + 0x09, 0x820500);
+            Hypervisor.RedirectCMP(Variables.HFIX_IntroOffsets[6] + 0x17, 0x820504);
+
             if (sender == null)
             Terminal.Log("Menu submitted successfully!", 0);
         }
