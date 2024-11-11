@@ -92,12 +92,16 @@ namespace ReFined.KH2.Functions
                 if (Operations.GetFileSize("itempic/item-271.imd") == 0x00)
                 {
                     Terminal.Log("The Re:Fined Main Patch is either not installed or not detected! Please ensure you have installed \"KH-ReFined/KH2-MAIN\" and try again. Re:Fined will now terminate.", 0x02);
+
+                    Console.ReadKey(true);
                     Environment.Exit(0);
                 }
 
                 if (Operations.GetFileSize("03system.bin") == 0x00)
                 {
                     Terminal.Log("03system.bin is corrupted! This can be caused by not extracting the game before installation. Please reinstall the patch and try again. Re:Fined will now terminate.", 0x02);
+                    
+                    Console.ReadKey(true);
                     Environment.Exit(0);
                 }
 
@@ -149,6 +153,7 @@ namespace ReFined.KH2.Functions
             {
                 Terminal.Log(ERROR);
                 Terminal.Log(_versionString + " terminated with an exception!", 1);
+                Console.ReadKey(true);
                 Environment.Exit(-1);
             }
         }
