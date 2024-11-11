@@ -368,7 +368,6 @@ namespace ReFined.KH2.Functions
 
             if (_menuRead == 0x24 && _pauseRead == 0x01 && _selectPoint != 0x00)
             {
-                var _liteOffset = 0x00;
 
                 if (_settingsPoint != 0x00 && !DEBOUNCE[6])
                 {
@@ -407,14 +406,12 @@ namespace ReFined.KH2.Functions
                         {
                             var _heartlessClassic = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.HEARTLESS_VANILLA) ? 0x00 : 0x01;
                             SETTINGS_READ.Insert(0x09, Convert.ToByte(_heartlessClassic));
-                            _liteOffset += 0x01;
                         }
 
                         if (_musicActive)
                         {
                             var _musicClassic = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.MUSIC_VANILLA) ? 0x00 : 0x01;
                             SETTINGS_READ.Insert(0x09, Convert.ToByte(_musicClassic));
-                            _liteOffset += 0x01;
                         }
                     }
 
@@ -450,10 +447,10 @@ namespace ReFined.KH2.Functions
 
                 var _vibrationBit = SETTINGS_WRITE[0x08] == 0x00 ? Variables.CONFIG_BITWISE.VIBRATION : Variables.CONFIG_BITWISE.OFF;
 
-                var _commandBit = SETTINGS_WRITE[0x08 + _liteOffset] == 0x01 ? Variables.CONFIG_BITWISE.COMMAND_KH2 : Variables.CONFIG_BITWISE.OFF;
-
                 var _musicBit = SETTINGS_WRITE[0x09] == 0x00 ? Variables.CONFIG_BITWISE.MUSIC_VANILLA : Variables.CONFIG_BITWISE.OFF;
                 var _enemyBit = SETTINGS_WRITE[0x0A] == 0x00 ? Variables.CONFIG_BITWISE.HEARTLESS_VANILLA : Variables.CONFIG_BITWISE.OFF;
+
+                var _commandBit = SETTINGS_WRITE[0x09 + Convert.ToInt32(_musicActive) + Convert.ToInt32(_enemyActive)] == 0x01 ? Variables.CONFIG_BITWISE.COMMAND_KH2 : Variables.CONFIG_BITWISE.OFF;
 
                 Variables.SAVE_MODE = SETTINGS_WRITE[0x06];
                 Variables.CONTROLLER_MODE = SETTINGS_WRITE[0x07] == 0x00 ? true : false;
@@ -484,7 +481,7 @@ namespace ReFined.KH2.Functions
                 var _checkMusic = SETTINGS_WRITE[0x09] == SETTINGS_READ[0x09];
                 var _checkEnemy = SETTINGS_WRITE[0x0A] == SETTINGS_READ[0x0A];
 
-                if (!_checkMusic || !_checkEnemy)
+                if (!Variables.IS_LITE && ((!_checkMusic && _musicActive) || (!_checkEnemy && _checkEnemy)))
                 {
                     LOCK_AUTOSAVE = true;
 
@@ -516,7 +513,7 @@ namespace ReFined.KH2.Functions
 
                     // Initiate the jump.
                     Hypervisor.Write(Variables.ADDR_Area, _newArray);
-                    Variables.SharpHook[OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Variables.ADDR_Area), 2, 0, 0, 0);
+                    Variables.SharpHook[OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Hypervisor.PureAddress + Variables.ADDR_Area), 2, 0, 0, 0);
 
                     // Wait until the fade has been completed.
                     while (Hypervisor.Read<byte>(0xABB3C7) != 0x80) ;
@@ -535,7 +532,7 @@ namespace ReFined.KH2.Functions
 
                     // Atfer load, jump back to where we came from.
                     Hypervisor.Write(Variables.ADDR_Area, AREA_READ);
-                    Variables.SharpHook[OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Variables.ADDR_Area), 2, 0, 0, 0);
+                    Variables.SharpHook[OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Hypervisor.PureAddress + Variables.ADDR_Area), 2, 0, 0, 0);
 
                     // Wait until load.
                     while (Hypervisor.Read<byte>(Variables.ADDR_LoadFlag) != 1) ;
