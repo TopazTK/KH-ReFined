@@ -61,7 +61,7 @@ namespace ReFined.KH2.InGame
         /// <param name="StartMSG">The address in which the MSG file starts. Must be a valid MSG file.</param>
         /// <param name="StringID">The ID of the String to fetch the pointer of.</param>
         /// <returns>The absolute pointer of the given string.</returns>
-        public static long FetchPointerMSG(ulong StartMSG, ushort StringID)
+        public static ulong FetchPointerMSG(ulong StartMSG, ushort StringID)
         {
             var _msnAbsolute = Hypervisor.Read<ulong>(StartMSG);
 
@@ -76,9 +76,9 @@ namespace ReFined.KH2.InGame
 
             var _offsetLocal = _fetchData.FindValue<int>(StringID);
 
-            var _offsetString = Hypervisor.Read<int>(_msnAbsolute + _offsetLocal + 0x0C, true);
+            var _offsetString = Hypervisor.Read<uint>(_msnAbsolute + _offsetLocal + 0x0C, true);
 
-            return (long)_msnAbsolute + _offsetString;
+            return _msnAbsolute + _offsetString;
         }
 
         /// <summary>
