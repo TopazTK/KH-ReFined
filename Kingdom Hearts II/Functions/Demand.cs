@@ -3,6 +3,7 @@ using ReFined.Libraries;
 using ReFined.KH2.InGame;
 using ReFined.KH2.Information;
 using BSharpConvention = Binarysharp.MSharp.Assembly.CallingConvention.CallingConventions;
+using System.Net.NetworkInformation;
 
 namespace ReFined.KH2.Functions
 {
@@ -12,6 +13,11 @@ namespace ReFined.KH2.Functions
 
         public static int SKIP_STAGE;
         public static bool SKIP_ROXAS;
+
+        static byte CURR_SHORTCUT = 0x00;
+        static bool SHORTCUT_TOGGLE = false;
+
+        static byte[] MAIN_TEXT = null;
 
         static bool[] DEBOUNCE = new bool[0x20];
 
@@ -26,34 +32,27 @@ namespace ReFined.KH2.Functions
 
             var _canReset = !Variables.IS_TITLE && _loadRead == 0x01;
 
-            // If the button combo was exactly as requested, and a menu isn't present:
             if (_buttonRead == Variables.RESET_COMBO && _canReset && !DEBOUNCE[0])
             {
                 Terminal.Log("Soft Reset requested.", 0);
                 DEBOUNCE[0] = true;
 
-                // If the prompt has been requested:
                 if (Variables.RESET_PROMPT)
                 {
                     Terminal.Log("Soft Reset Prompt enabled. Showing prompt.", 0);
 
-                    // Show the prompt.
                     Message.ShowSmallObtained(0x0100);
                     var _cancelRequest = false;
 
-                    // Start the prompt task.
                     Task.Factory.StartNew(() =>
                     {
-                        Terminal.Log("Waiting 2.2 seconds before execution.", 0);
+                        Terminal.Log("Waiting 2 seconds before execution.", 0);
 
-                        // For the next 2 seconds:
-                        while ((DateTime.Now - _currentTime) < TimeSpan.FromMilliseconds(2200))
+                        while ((DateTime.Now - _currentTime) < TimeSpan.FromMilliseconds(2000))
                         {
-                            // Monitor the buttons, and if pressed:
                             var _buttonSeek = (_confirmRead == 0x01 ? 0x2000 : 0x4000);
                             var _buttonSecond = Hypervisor.Read<ushort>(Variables.ADDR_Input);
 
-                            // Cancel the reset.
                             if ((_buttonSecond & _buttonSeek) == _buttonSeek)
                             {
                                 Terminal.Log("Soft Reset interrupted.", 0);
@@ -64,7 +63,6 @@ namespace ReFined.KH2.Functions
                             };
                         }
 
-                        // If not cancelled: Initiate the reset.
                         if (!_cancelRequest)
                         {
                             Hypervisor.Write<byte>(Variables.ADDR_Reset, 0x01);
@@ -74,7 +72,6 @@ namespace ReFined.KH2.Functions
                     });
                 }
 
-                // If the prompt isn't requested: Reset instantly.
                 else
                 {
                     Hypervisor.Write<byte>(Variables.ADDR_Reset, 0x01);
@@ -86,17 +83,13 @@ namespace ReFined.KH2.Functions
 
         public static void TriggerEncounter()
         {
-            // The pointer for the current room's enemy information.
             var _roomPoint = Hypervisor.Read<ulong>(Variables.PINT_EnemyInfo) + 0x08;
 
-            // Reading the current values into memory.
             var _roomRead = Hypervisor.Read<byte>(Variables.ADDR_LoadFlag);
             var _abilityRead = Hypervisor.Read<ushort>(Variables.ADDR_SaveData + 0x2544, 0x60);
 
-            // Check if the game is loaded, and if the player has Encounter Plus in anyway.
             if (!Variables.IS_TITLE && _roomRead == 0x01 && !DEBOUNCE[2] && !_abilityRead.Contains<ushort>(0x80F8) && !_abilityRead.Contains<ushort>(0x00F8))
             {
-                // If not, give them the ability.
                 var _fetchIndex = Array.FindIndex(_abilityRead, x => x == 0x0000);
 
                 Terminal.Log("Encounter Plus has been added to the inventory!", 0);
@@ -157,10 +150,8 @@ namespace ReFined.KH2.Functions
                         Hypervisor.Write(Variables.ADDR_Area + 0x04, 0x01);
                         Hypervisor.Write(Variables.ADDR_Area + 0x08, 0x01);
 
-                        // Wait until the fade has been completed.
                         while (Hypervisor.Read<byte>(0xABB3C7) != 0x80) ;
 
-                        // Destroy the fade handler so it does not cause issues.
                         Hypervisor.DeleteInstruction((ulong)(Critical.OffsetSetFadeOff + 0x81A), 0x08);
                         Hypervisor.Write<byte>(0xABB3C7, 0x80);
 
@@ -170,7 +161,6 @@ namespace ReFined.KH2.Functions
 
                         while (Hypervisor.Read<byte>(Variables.ADDR_LoadFlag) == 0x00) ;
 
-                        // Restore the fade initiater after load.
                         Hypervisor.Write<byte>((ulong)(Critical.OffsetSetFadeOff + 0x81A), [0xF3, 0x0F, 0x11, 0x8F, 0x0C, 0x01, 0x00, 0x00]);
 
                         Hypervisor.Write(Variables.ADDR_SaveData + 0x1CD0, 0x1FF00001);
@@ -199,9 +189,6 @@ namespace ReFined.KH2.Functions
                     while (Hypervisor.Read<byte>(Variables.ADDR_LoadFlag) == 0x00) ;
 
                     Variables.SharpHook[Critical.OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Hypervisor.PureAddress + Variables.ADDR_Area), 2, 0, 0, 0);
-
-                    // Look. Imma be honest with ya. All THIS to skip just *ONE* cutscene may not be worth it.
-                    // Buth damn does it make the transition E X T R E M E L Y smooth.
 
                     Hypervisor.Write(
                         Variables.ADDR_SaveData + 0x31C,
@@ -306,7 +293,7 @@ namespace ReFined.KH2.Functions
                     Hypervisor.Write(Variables.ADDR_SaveData + 0x41B1, 0x08);
 
                     Hypervisor.Write(
-                        Variables.ADDR_SaveData + 0x4278, 
+                        Variables.ADDR_SaveData + 0x4278,
                         new byte[]
                         {
                             0xF8,
@@ -342,7 +329,7 @@ namespace ReFined.KH2.Functions
                     Hypervisor.Write(Variables.ADDR_SaveData + 0x43D8, 0x008A00A3);
 
                     Hypervisor.Write(
-                        Variables.ADDR_SaveData + 0x4438, 
+                        Variables.ADDR_SaveData + 0x4438,
                         new byte[]
                         {
                             0xCC,
@@ -552,40 +539,40 @@ namespace ReFined.KH2.Functions
 
                     Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x239E, 0x9F);
                     Hypervisor.Write(
-                        Variables.ADDR_SaveData + 0x1CD0, 
+                        Variables.ADDR_SaveData + 0x1CD0,
                         new byte[]
-                        { 
-                            0x01, 
-                            0x00, 
-                            0xF0, 
-                            0xFF, 
-                            0xFF, 
-                            0xFF, 
-                            0xFF, 
-                            0xFF, 
-                            0xFF, 
-                            0xFF, 
-                            0xFF, 
-                            0xDB, 
-                            0xFF, 
-                            0xFF, 
-                            0xFF, 
-                            0xFF, 
-                            0xFF, 
-                            0xFF, 
-                            0x07, 
-                            0x00, 
-                            0x00, 
-                            0x00, 
-                            0x00, 
-                            0x00, 
-                            0x00, 
-                            0xD0, 
-                            0x05, 
-                            0x08, 
-                            0x01, 
-                            0x00, 
-                            0x00, 
+                        {
+                            0x01,
+                            0x00,
+                            0xF0,
+                            0xFF,
+                            0xFF,
+                            0xFF,
+                            0xFF,
+                            0xFF,
+                            0xFF,
+                            0xFF,
+                            0xFF,
+                            0xDB,
+                            0xFF,
+                            0xFF,
+                            0xFF,
+                            0xFF,
+                            0xFF,
+                            0xFF,
+                            0x07,
+                            0x00,
+                            0x00,
+                            0x00,
+                            0x00,
+                            0x00,
+                            0x00,
+                            0xD0,
+                            0x05,
+                            0x08,
+                            0x01,
+                            0x00,
+                            0x00,
                             0x81
                         });
 
@@ -652,6 +639,117 @@ namespace ReFined.KH2.Functions
                 {
                     Terminal.Log("Loaded game detected! Disabling Roxas Skip...", 0);
                     SKIP_STAGE = 3;
+                }
+            }
+        }
+
+        public static void TriggerShortcut()
+        {
+            var _menuPointer = Hypervisor.GetPointer64(0x2A11110);
+            var _menuType = Hypervisor.Read<byte>(_menuPointer, true);
+
+            var _isPaused = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag);
+            var _subMenuType = Hypervisor.Read<byte>(Variables.ADDR_SubMenuType);
+
+            var _inputRead = Hypervisor.Read<short>(Variables.ADDR_Input);
+            var _currShort = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0xE000);
+
+            var _shortReal = Variables.ADDR_SaveData + 0x36F8;
+            var _shortFake = Variables.ADDR_SaveData + 0xE100;
+
+            var _fetchPoint = Operations.FetchPointerMSG(Variables.PINT_SystemMSG, 0x051F);
+
+            var _isInMainShortcut = _isPaused == 0x01 && _subMenuType == 0x19;
+            var _isEditingShortcut = _isPaused == 0x01 && (_subMenuType == 0x1A || _subMenuType == 0x1D || _subMenuType == 0x1E || _subMenuType == 0x1F);
+            var _isInShortcut = _isPaused == 0x01 && (_subMenuType == 0x19 || _subMenuType == 0x1A || _subMenuType == 0x1D || _subMenuType == 0x1E || _subMenuType == 0x1F);
+
+            if (MAIN_TEXT == null)
+                MAIN_TEXT = Operations.FetchStringMSG(Variables.PINT_SystemMSG, 0x051F);
+
+            if (!Variables.IS_TITLE)
+            {
+                if (_isEditingShortcut && !SHORTCUT_TOGGLE)
+                    SHORTCUT_TOGGLE = true;
+
+                else if ((!_isEditingShortcut && SHORTCUT_TOGGLE) || Hypervisor.Read<short>(_shortFake) == 0x0000)
+                {
+                    Terminal.Log("Submitting Shortcut Menu " + Char.ConvertFromUtf32(0x41 + CURR_SHORTCUT) + "!", 0x00);
+                    var _shortTake = Hypervisor.Read<byte>(_shortReal, 0x08);
+                    Hypervisor.Write(_shortFake + (0x08U * CURR_SHORTCUT), _shortTake);
+                    SHORTCUT_TOGGLE = false;
+                }
+
+                if (!_isInShortcut)
+                    Hypervisor.Write(_fetchPoint, "Sora".ToKHSCII(), true);
+
+                else
+                {
+                    MAIN_TEXT[MAIN_TEXT.Length - 0x02] = (byte)(0x2E + CURR_SHORTCUT);
+                    Hypervisor.Write(_fetchPoint, MAIN_TEXT, true);
+                }
+
+                if (_menuType != 0x05 || ((_inputRead & 0x40) == 0x00 && (_inputRead & 0x10) == 0x00))
+                    DEBOUNCE[1] = false;
+
+                if (!_isInMainShortcut || ((_inputRead & 0x0400) == 0x00 && (_inputRead & 0x0800) == 0x00))
+                    DEBOUNCE[4] = false;
+
+                if (_menuType == 0x05 && !DEBOUNCE[1])
+                {
+                    if ((_inputRead & 0x40) == 0x40 && !DEBOUNCE[1])
+                    {
+                        Sound.PlaySFX(0x14);
+                        CURR_SHORTCUT++;
+                        DEBOUNCE[1] = true;
+                    }
+
+                    if ((_inputRead & 0x10) == 0x10 && !DEBOUNCE[1])
+                    {
+                        Sound.PlaySFX(0x14);
+                        CURR_SHORTCUT--;
+                        DEBOUNCE[1] = true;
+                    }
+                }
+
+                if (_isInMainShortcut && !DEBOUNCE[4])
+                {
+                    if ((_inputRead & 0x0800) == 0x0800 && !DEBOUNCE[4])
+                    {
+                        Sound.PlaySFX(0x02);
+                        CURR_SHORTCUT++;
+                        DEBOUNCE[4] = true;
+                    }
+
+                    if ((_inputRead & 0x0400) == 0x0400 && !DEBOUNCE[4])
+                    {
+                        Sound.PlaySFX(0x02);
+                        CURR_SHORTCUT--;
+                        DEBOUNCE[4] = true;
+                    }
+                }
+
+                switch (CURR_SHORTCUT)
+                {
+                    case 0x03:
+                        CURR_SHORTCUT = 0x00;
+                        break;
+
+                    case 0xFF:
+                        CURR_SHORTCUT = 0x02;
+                        break;
+                }
+
+                if (CURR_SHORTCUT != _currShort && (DEBOUNCE[1] || DEBOUNCE[4]))
+                {
+                    Terminal.Log("Swapping to Shortcut Menu " + Char.ConvertFromUtf32(0x41 + CURR_SHORTCUT) + "!", 0x00);
+
+                    var _shortTake = Hypervisor.Read<byte>(_shortFake + (0x08U * CURR_SHORTCUT), 0x08);
+
+                    Hypervisor.Write(_shortReal, _shortTake);
+                    Hypervisor.Write(Variables.ADDR_SaveData + 0xE000, CURR_SHORTCUT);
+
+                    if (_isInShortcut)
+                        Variables.SharpHook[0x35BAA0].Execute();
                 }
             }
         }
