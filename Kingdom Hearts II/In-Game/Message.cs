@@ -26,7 +26,7 @@ namespace ReFined.KH2.InGame
             if (!Variables.IS_TITLE)
             {
                 var _pointString = Operations.FetchPointerMSG(Variables.PINT_SystemMSG, StringID);
-                Variables.SharpHook[OffsetInfo].Execute(_pointString);
+                Variables.SharpHook[OffsetInfo].Execute((long)_pointString);
             }
         }
 
@@ -54,7 +54,7 @@ namespace ReFined.KH2.InGame
             if (!Variables.IS_TITLE)
             {
                 var _pointString = Operations.FetchPointerMSG(Variables.PINT_SystemMSG, StringID);
-                Variables.SharpHook[OffsetObtained].Execute(_pointString);
+                Variables.SharpHook[OffsetObtained].Execute((long)_pointString);
             }
         }
 
