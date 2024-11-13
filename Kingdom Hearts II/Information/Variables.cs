@@ -174,6 +174,7 @@ namespace ReFined.KH2.Information
         public static ulong ADDR_BTLFormatter = 0x5C5E48;
 
         public static ulong ADDR_ObjentryBASE = 0x2A254D0;
+        public static ulong ADDR_LimitShortcut = 0x5C9678;
 
         //
         // POINTERS
@@ -195,9 +196,9 @@ namespace ReFined.KH2.Information
         public static ulong PINT_EnemyInfo = 0x2A0CD70;
 
         //
-        // RPC ASSET LIBRARY
+        // ASSET LIBRARY
         //
-        // Everything DiscordRPC uses (except for the RPC itself) resides here.
+        // Everything DiscordRPC uses (except for the RPC itself) and some other dictionaries resides here.
         //
 
         public static string[] DICTIONARY_BTL = { "safe", "mob", "boss" };
@@ -205,6 +206,14 @@ namespace ReFined.KH2.Information
         public static string[] DICTIONARY_CPS = { "cup_pp", "cup_cerb", "cup_titan", "cup_god", "cup_hades" };
         public static string[] DICTIONARY_FRM = { "None", "Valor", "Wisdom", "Limit", "Master", "Final", "Anti" };
         public static string[] DICTIONARY_MDE = { "Beginner Mode", "Standard Mode", "Proud Mode", "Critical Mode" };
+
+        public static Dictionary<string, short> DICTIONARY_LMT = new Dictionary<string, short>()
+        {
+            { "ragnarok", 0x02AB },
+            { "arcanum", 0x02BD },
+            { "raid", 0x02C0 },
+            { "sonic", 0x02BA }
+        };
 
         //
         // FUNCTION SIGNATURES
@@ -226,6 +235,9 @@ namespace ReFined.KH2.Information
         public static string FUNC_SetFadeOff = "48 83 EC 28 85 C9 79 0F 0F BA F1 1F 89 0D ?? ?? ?? ?? 48 83 C4 28 C3 89 0D ?? ?? ?? ?? 81 E1 FF FF FF 3F 0F 84 ?? ?? ?? ?? 83 E9 01";
         public static string FUNC_FindFile = "48 89 5C 24 08 57 48 83 EC 20 8B DA 48 8B F9 45 33 C0 4D 85 C0 75 09 4C 8B 05 ?? ?? ?? ??";
         public static string FUNC_GetFileSize = "40 53 48 81 EC 30 01 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 20 01 00 00 48 8D 15 ?? ?? ?? ??";
+        public static string FUNC_ShortcutUpdate = "48 83 EC 28 E8 97 F9 FF FF 48 83 C4 28 E9 DE 02 00 00";
+        public static string FUNC_ConfigUpdate = "40 53 55 56 57 41 54 41 55 41 56 41 57 48 83 EC 58 E8 ?? ?? ?? ?? 48 8B 0D ?? ?? ?? ?? 4C 8B F8 E8 ?? ?? ?? ??";
+        public static string FUNC_SelectUpdate = "48 83 EC 28 48 8B 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 63 D0 48 8B 05 ?? ?? ?? ?? 48 0F BE 0C 02";
 
         //
         // HOTFIX SIGNATURES
@@ -242,6 +254,7 @@ namespace ReFined.KH2.Information
         public static string HFIX_ShortcutListFilter = "48 89 5C 24 18 57 48 83 EC 20 33 DB 48 89 6C 24 30 41 8B F8 48 8B E9";
         public static string HFIX_ShortcutEquipFilter = "48 83 EC 28 E8 ?? ?? ?? ?? 0F B6 48 02 84 C9 74 19";
         public static string HFIX_ShortcutCategoryFilter = "48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 57 41 54 41 55 41 56 41 57 48 81 EC 90 01 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 80 01 00 00 33 F6 89 4C 24 28 85 C9 48 8D 05 ?? ?? ?? ??";
+        public static string HFIX_FormInventory = "48 89 5C 24 18 57 48 83 EC 20 33 DB 48 89 6C 24 30 41 8B F8 48 8B E9";
         
         public static string HFIX_ConfigFirst = "40 53 48 83 EC 20 0F B6 D9 48 8B 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 4C 8B 1D ?? ?? ?? ??";
         public static string HFIX_ConfigSecond = "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 41 54 41 55 41 56 41 57 48 81 EC 80 00 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 70 E8 ?? ?? ?? ?? 48 8B 0D ?? ?? ?? ??";

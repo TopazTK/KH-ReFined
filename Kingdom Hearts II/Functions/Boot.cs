@@ -24,6 +24,7 @@ namespace ReFined.KH2.Functions
                 Variables.RESET_PROMPT = Convert.ToBoolean(_configIni.Read("resetPrompt", "Kingdom Hearts II"));
                 Variables.RESET_COMBO = Convert.ToUInt16(_configIni.Read("resetCombo", "General"), 16);
                 Variables.RETRY_DEFAULT = _configIni.Read("deathPrompt", "Kingdom Hearts II") == "retry" ? true : false;
+                Variables.LIMIT_SHORTS = _configIni.Read("limitShortcuts", "Kingdom Hearts II");
 
                 _versionString = Variables.IS_LITE ? "Re:Freshed" : "Re:Fined";
 
@@ -35,6 +36,8 @@ namespace ReFined.KH2.Functions
                 Variables.DiscordClient.Initialize();
 
                 Terminal.Log("Locating Function Signatures...", 0);
+
+                Demand.OffsetShortcutUpdate = Hypervisor.FindSignature(Variables.FUNC_ShortcutUpdate);
 
                 Message.OffsetMenu = Hypervisor.FindSignature(Variables.FUNC_SetMenuType);
                 Message.OffsetInfo = Hypervisor.FindSignature(Variables.FUNC_ShowInformation);
@@ -49,6 +52,8 @@ namespace ReFined.KH2.Functions
                 Critical.OffsetShutMusic = Hypervisor.FindSignature(Variables.FUNC_StopBGM);
                 Critical.OffsetMapJump = Hypervisor.FindSignature(Variables.FUNC_MapJump);
                 Critical.OffsetSetFadeOff = Hypervisor.FindSignature(Variables.FUNC_SetFadeOff);
+                Critical.OffsetConfigUpdate= Hypervisor.FindSignature(Variables.FUNC_ConfigUpdate);
+                Critical.OffsetSelectUpdate = Hypervisor.FindSignature(Variables.FUNC_SelectUpdate);
 
                 Operations.OffsetFindFile = Hypervisor.FindSignature(Variables.FUNC_FindFile);
                 Operations.OffsetGetFileSize = Hypervisor.FindSignature(Variables.FUNC_GetFileSize);
@@ -68,6 +73,7 @@ namespace ReFined.KH2.Functions
                 Critical.LIST_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_ShortcutListFilter);
                 Critical.EQUIP_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_ShortcutEquipFilter);
                 Critical.CATEGORY_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_ShortcutCategoryFilter);
+                Critical.FORM_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_FormInventory);
 
                 Critical.WARP_FUNCTION = Hypervisor.Read<byte>(Critical.WARP_OFFSET, 0x05);
                 Critical.INVT_FUNCTION = Hypervisor.Read<byte>(Critical.INVT_OFFSET, 0x07);
@@ -139,6 +145,18 @@ namespace ReFined.KH2.Functions
 
                     var _entRoxas = new Intro.Entry(2, 0x0130, 0x0000, [0x0138, 0x0139], [0x0131, 0x0132]);
                     Variables.INTRO_MENU.Children.Add(_entRoxas);
+                }
+
+                if (Variables.LIMIT_SHORTS != "")
+                {
+                    Continuous.LIMIT_SHORT = new short[4];
+
+                    var _splitArr = Variables.LIMIT_SHORTS.Replace("[", "").Replace("]", "").Replace(", ", ",").Split(',');
+
+                    Continuous.LIMIT_SHORT[0] = Variables.DICTIONARY_LMT[_splitArr[0]];
+                    Continuous.LIMIT_SHORT[1] = Variables.DICTIONARY_LMT[_splitArr[1]];
+                    Continuous.LIMIT_SHORT[2] = Variables.DICTIONARY_LMT[_splitArr[2]];
+                    Continuous.LIMIT_SHORT[3] = Variables.DICTIONARY_LMT[_splitArr[3]];
                 }
 
                 Variables.Source = new CancellationTokenSource();

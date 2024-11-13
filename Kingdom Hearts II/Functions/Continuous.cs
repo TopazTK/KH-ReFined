@@ -1,8 +1,8 @@
 ﻿using DiscordRPC;
+
 using ReFined.Common;
-using ReFined.KH2.Information;
-using ReFined.KH2.InGame;
 using ReFined.Libraries;
+using ReFined.KH2.Information;
 
 namespace ReFined.KH2.Functions
 {
@@ -12,6 +12,7 @@ namespace ReFined.KH2.Functions
         public static ulong LIMITER_OFFSET;
 
         public static byte[]? LIMITER_FUNCTION = null;
+        public static short[] LIMIT_SHORT;
 
         public static void ToggleWarpGOA()
         {
@@ -64,6 +65,31 @@ namespace ReFined.KH2.Functions
             Hypervisor.Write(Variables.ADDR_ControllerMode, (byte)(Variables.CONTROLLER_MODE ? 0x00 : 0x01));
         }
 
+        public static void ToggleLimitShortcuts()
+        {
+            var _confirmRead = Hypervisor.Read<byte>(Variables.ADDR_Confirm);
+            var _modeRead = Hypervisor.Read<ushort>(Variables.ADDR_ControllerMode);
+            var _shortRead = Hypervisor.Read<ushort>(Variables.ADDR_LimitShortcut);
+
+            if (_confirmRead == 0x01 && _shortRead != LIMIT_SHORT[3])
+            {
+                Terminal.Log("Overriding Limits for the Japanese scheme.", 0);
+
+                Hypervisor.Write(Variables.ADDR_LimitShortcut, LIMIT_SHORT[3]);
+                Hypervisor.Write(Variables.ADDR_LimitShortcut + 0x06, LIMIT_SHORT[0]);
+            }
+
+            else if (_confirmRead == 0x00 && _shortRead != LIMIT_SHORT[0] && _modeRead == 0)
+            {
+                Terminal.Log("Overriding Limits for the English Scheme", 0);
+
+                Hypervisor.Write(Variables.ADDR_LimitShortcut, LIMIT_SHORT[0]);
+                Hypervisor.Write(Variables.ADDR_LimitShortcut + 0x06, LIMIT_SHORT[3]);
+            }
+
+            Hypervisor.Write(Variables.ADDR_LimitShortcut + 0x02, LIMIT_SHORT[1]);
+            Hypervisor.Write(Variables.ADDR_LimitShortcut + 0x04, LIMIT_SHORT[2]);
+        }
 
         public static void ToggleDiscord()
         {
