@@ -3,12 +3,14 @@ using ReFined.Libraries;
 using ReFined.KH2.InGame;
 using ReFined.KH2.Information;
 using BSharpConvention = Binarysharp.MSharp.Assembly.CallingConvention.CallingConventions;
-using System.Net.NetworkInformation;
+using System.Linq;
 
 namespace ReFined.KH2.Functions
 {
     public static class Demand
     {
+        public static IntPtr OffsetShortcutUpdate;
+
         public static ulong PROMPT_FUNCTION;
 
         public static int SKIP_STAGE;
@@ -17,9 +19,18 @@ namespace ReFined.KH2.Functions
         static byte CURR_SHORTCUT = 0x00;
         static bool SHORTCUT_TOGGLE = false;
 
+        static byte UPDATE_PHASE = 0x00;
+        static bool UPDATE_TRIGGERED = false;
+
         static byte[] MAIN_TEXT = null;
 
         static bool[] DEBOUNCE = new bool[0x20];
+
+        static byte[] UPDATE_TEXT = null;
+        static byte[] UPDATE_DONE_TEXT = null;
+          
+        static int UPDATE_BAR_INDEX = 0x00;
+        static int UPDATE_PRG_INDEX = 0x00;
 
         public static void TriggerReset()
         {
@@ -178,8 +189,6 @@ namespace ReFined.KH2.Functions
 
                 else if (_worldCheck == 0x02 && _roomCheck == 0x20 && _eventCheck == 0x01 && _cutsceneCheck == 0x01 && SKIP_STAGE == 1)
                 {
-                    Thread.Sleep(1000);
-
                     Terminal.Log("Room parameters correct! Skip was initiated! Initiating Roxas Skip's Second Phase...", 0);
 
                     Hypervisor.Write<uint>(Variables.ADDR_Area, 0x00320E02);
@@ -653,6 +662,7 @@ namespace ReFined.KH2.Functions
 
             var _inputRead = Hypervisor.Read<short>(Variables.ADDR_Input);
             var _currShort = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0xE000);
+            var _currForm = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x3524);
 
             var _shortReal = Variables.ADDR_SaveData + 0x36F8;
             var _shortFake = Variables.ADDR_SaveData + 0xE100;
@@ -694,7 +704,7 @@ namespace ReFined.KH2.Functions
                 if (!_isInMainShortcut || ((_inputRead & 0x0400) == 0x00 && (_inputRead & 0x0800) == 0x00))
                     DEBOUNCE[4] = false;
 
-                if (_menuType == 0x05 && !DEBOUNCE[1])
+                if (_menuType == 0x05 && !DEBOUNCE[1] && _currForm != 0x03)
                 {
                     if ((_inputRead & 0x40) == 0x40 && !DEBOUNCE[1])
                     {
@@ -749,7 +759,117 @@ namespace ReFined.KH2.Functions
                     Hypervisor.Write(Variables.ADDR_SaveData + 0xE000, CURR_SHORTCUT);
 
                     if (_isInShortcut)
-                        Variables.SharpHook[0x35BAA0].Execute();
+                        Variables.SharpHook[OffsetShortcutUpdate].Execute();
+                }
+            }
+        }
+    
+        public static void TriggerUpdate()
+        {
+            if (!UPDATE_TRIGGERED)
+            {
+                var _isLoaded = Hypervisor.Read<byte>(Variables.ADDR_LoadFlag) == 0x01 ? true : false;
+                var _isPaused = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag) == 0x01 ? true : false;
+                var _menuType = Hypervisor.Read<byte>(Variables.ADDR_MenuType);
+
+                var UPDATE_TEXTAbsolute = Operations.FetchPointerMSG(Variables.PINT_SystemMSG, 0x0129);
+
+                if (!Variables.IS_TITLE && _isLoaded)
+                {
+                    Critical.LOCK_AUTOSAVE = true;
+
+                    if (!_isPaused && _menuType != 0x08)
+                    {
+                        Thread.Sleep(750);
+                        Variables.SharpHook[Critical.OffsetCampMenu].Execute(BSharpConvention.MicrosoftX64, 0, 0);
+                        Thread.Sleep(750);
+                    }
+
+                    else if (_isPaused && _menuType == 0x08)
+                    {
+                        var _inputRead = Hypervisor.Read<ushort>(Variables.ADDR_Input);
+
+                        var _confirmButton = Hypervisor.Read<byte>(Variables.ADDR_Confirm) == 0x01 ? 0x2000 : 0x4000;
+                        var _denyButton = Hypervisor.Read<byte>(Variables.ADDR_Confirm) == 0x01 ? 0x4000 : 0x2000;
+
+                        var _selectRead = Hypervisor.Read<byte>(0x902521);
+
+                        var _isConfirming = (_inputRead & _confirmButton) == _confirmButton;
+                        var _isDenying = (_inputRead & _denyButton) == _denyButton;
+
+                        if (UPDATE_DONE_TEXT == null)
+                        {
+                            UPDATE_DONE_TEXT = Operations.FetchStringMSG(Variables.PINT_SystemMSG, 0x012A);
+                            UPDATE_TEXT = Operations.FetchStringMSG(Variables.PINT_SystemMSG, 0x0129);
+
+                            UPDATE_BAR_INDEX = UPDATE_TEXT.ToList().FetchIndexOf(x => x == 0x87);
+                            UPDATE_PRG_INDEX = UPDATE_TEXT.ToList().FetchIndexOf(x => x == 0x98);
+                           
+                            var _tempText = new List<byte>();
+                           
+                            _tempText.AddRange(UPDATE_TEXT.Take(UPDATE_BAR_INDEX));
+                            _tempText.AddRange(Enumerable.Repeat((byte)0x6B, 20).ToArray());
+                            _tempText.AddRange(UPDATE_TEXT.Skip(UPDATE_BAR_INDEX + 20));
+                           
+                            UPDATE_TEXT = _tempText.ToArray();
+                            Hypervisor.Write(UPDATE_TEXTAbsolute, UPDATE_TEXT, true);
+                        }
+
+                        if (UPDATE_PHASE == 0x00)
+                        {
+                            Variables.SharpHook[Message.OffsetSetCampWarning].ExecuteJMP(BSharpConvention.MicrosoftX64, 0x0128, 0x0000);
+                            Variables.SharpHook[Message.OffsetShowCampWarning].Execute(0x01);
+                            Variables.SharpHook[Message.OffsetMenu].Execute(BSharpConvention.MicrosoftX64, 0x04, 0x00);
+                            Variables.SharpHook[Message.OffsetMenu + 0x40].Execute();
+
+                            UPDATE_PHASE = 0x01;
+                        }
+
+                        if (UPDATE_PHASE == 0x01)
+                        {
+                            if (_isConfirming && _selectRead == 0x00)
+                                UPDATE_PHASE = 2;
+
+                            else if ((_isConfirming && _selectRead == 0x01) || _isDenying)
+                            {
+                                UPDATE_TRIGGERED = true;
+                                UPDATE_PHASE = 0;
+                            }
+                        }
+
+                        if (UPDATE_PHASE == 0x02)
+                        {
+                            Variables.SharpHook[0x304B30].Execute();
+                            Thread.Sleep(300);
+
+                            Variables.SharpHook[Message.OffsetSetCampWarning].ExecuteJMP(BSharpConvention.MicrosoftX64, 0x0129, 0x0000);
+                            
+                            for (int i = 0; i < 100; i++)
+                            {
+                                var _downProgress = Math.Floor(i / 5D);
+                                Hypervisor.Write(UPDATE_TEXTAbsolute + (ulong)UPDATE_BAR_INDEX + (ulong)_downProgress, (byte)0x6A, true);
+                                Hypervisor.Write(UPDATE_TEXTAbsolute + (uint)UPDATE_PRG_INDEX, i.ToString("000").ToKHSCII(), true);
+                                Thread.Sleep(250);
+                            }
+
+                            Hypervisor.Write(UPDATE_TEXTAbsolute, UPDATE_DONE_TEXT, true);
+
+                            Variables.SharpHook[Message.OffsetShowCampWarning].Execute();
+                            Variables.SharpHook[Message.OffsetMenu].Execute(BSharpConvention.MicrosoftX64, 0x04, 0x00);
+                            Variables.SharpHook[Message.OffsetMenu + 0x40].Execute();
+
+                            UPDATE_PHASE = 0x03;
+                        }
+
+                        if (UPDATE_PHASE == 0x03)
+                        {
+                            if (_isConfirming || _isDenying)
+                            {
+                                UPDATE_TRIGGERED = true;
+                                Critical.LOCK_AUTOSAVE = false;
+                            }
+                        }
+                    }
                 }
             }
         }
