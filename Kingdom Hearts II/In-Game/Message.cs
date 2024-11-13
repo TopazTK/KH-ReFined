@@ -93,7 +93,7 @@ namespace ReFined.KH2.InGame
         /// </summary>
         /// <param name="StringID">The ID of the text to be shown.</param>
         /// <param name="Type">The menu to fall back after confirmation.</param>
-        public static void ShowCampWarning(short StringID, int Type)
+        public static void ShowCampWarning(short StringID, int WarningType, int MenuType)
         {
             if (!Variables.IS_TITLE)
             {
@@ -101,8 +101,8 @@ namespace ReFined.KH2.InGame
                 Hypervisor.Write(0x689542, _currentMenu);
 
                 Variables.SharpHook[OffsetSetCampWarning].ExecuteJMP(BSharpConvention.MicrosoftX64, StringID, 0x0000);
-                Variables.SharpHook[OffsetShowCampWarning].Execute();
-                Variables.SharpHook[OffsetMenu].Execute(BSharpConvention.MicrosoftX64, Type, 0x00);
+                Variables.SharpHook[OffsetShowCampWarning].Execute(WarningType);
+                Variables.SharpHook[OffsetMenu].Execute(BSharpConvention.MicrosoftX64, MenuType, 0x00);
 
                 Hypervisor.Write(0x1DCDDA + 0x340, _currentMenu);
             }

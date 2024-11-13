@@ -71,9 +71,7 @@ namespace ReFined.KH2.Functions
             if (Variables.MUSIC_VANILLA != PAST_MUSIC)
             {
                 Terminal.Log(String.Format("Switching Music to {0}...", Variables.MUSIC_VANILLA ? "Vanilla" : "Remastered"), 0);
-
-                byte[] _musicPrefix = Variables.MUSIC_VANILLA ? [0x70, 0x73, 0x32, 0x6D, 0x64] : [ 0x6D, 0x75, 0x73, 0x69, 0x63 ];
-                Hypervisor.Write(Variables.ADDR_MusicPath, _musicPrefix);
+                Hypervisor.Write<byte>(Variables.ADDR_MusicPath, Variables.MUSIC_VANILLA ? [0x70, 0x73, 0x32, 0x6D, 0x64] : [0x6D, 0x75, 0x73, 0x69, 0x63]);
 
                 PAST_MUSIC = Variables.MUSIC_VANILLA;
             }

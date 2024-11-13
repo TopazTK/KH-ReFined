@@ -3,6 +3,7 @@ using ReFined.Libraries;
 using ReFined.KH2.Information;
 using ReFined.KH2.Menus;
 using BSharpConvention = Binarysharp.MSharp.Assembly.CallingConvention.CallingConventions;
+using ReFined.KH2.InGame;
 
 namespace ReFined.KH2.Functions
 {
@@ -12,6 +13,8 @@ namespace ReFined.KH2.Functions
         public static IntPtr OffsetShutMusic;
         public static IntPtr OffsetMapJump;
         public static IntPtr OffsetSetFadeOff;
+        public static IntPtr OffsetConfigUpdate;
+        public static IntPtr OffsetSelectUpdate;
 
         public static ulong WARP_OFFSET;
         public static ulong INVT_OFFSET;
@@ -21,6 +24,7 @@ namespace ReFined.KH2.Functions
         public static ulong LIST_OFFSET;
         public static ulong EQUIP_OFFSET;
         public static ulong CATEGORY_OFFSET;
+        public static ulong FORM_OFFSET;
 
         public static byte[]? WARP_FUNCTION;
         public static byte[]? INVT_FUNCTION;
@@ -62,6 +66,9 @@ namespace ReFined.KH2.Functions
         static uint MAGIC_LV1;
         static ushort MAGIC_LV2;
         static bool ROOM_LOADED;
+
+        static ulong[] LOAD_LIST = new ulong[7];
+        static byte PAST_FORM;
 
         public static void HandleMagicSort()
         {
@@ -212,8 +219,6 @@ namespace ReFined.KH2.Functions
 
             if (!Variables.IS_TITLE && _loadRead == 0x01 && !_blacklistCheck)
             {
-                Thread.Sleep(250);
-
                 var _battleRead = Hypervisor.Read<byte>(Variables.ADDR_BattleFlag);
                 var _cutsceneRead = Hypervisor.Read<byte>(Variables.ADDR_CutsceneFlag);
 
@@ -417,8 +422,8 @@ namespace ReFined.KH2.Functions
 
                     Hypervisor.Write(_settingsPoint, SETTINGS_READ.ToArray(), true);
 
-                    Variables.SharpHook[0x365A20].Execute();
-                    Variables.SharpHook[0x3659E0].Execute();
+                    Variables.SharpHook[OffsetConfigUpdate].Execute();
+                    Variables.SharpHook[OffsetSelectUpdate].Execute();
 
                     DEBOUNCE[6] = true;
                 }
@@ -840,46 +845,117 @@ namespace ReFined.KH2.Functions
 
             if (Variables.FORM_SHORTCUT && _parityCheck != 0xEB)
             {
-                // This reads part of the actual instruction which handles drive icons on shortcuts to move it.
                 var _copyInst = Hypervisor.Read<byte>(ICON_OFFSET + 0x1D, 0x19);
 
-                // This writes a JMP statement to trigger an alternative condition.
                 Hypervisor.Write<byte>(ICON_OFFSET + 0x1A, [0xEB, 0x19]);
 
-                // Move the instruction.
                 Hypervisor.Write(ICON_OFFSET + 0x1C, _copyInst);
 
-                // Write the check for the improper icon, and correct it.
                 Hypervisor.Write<byte>(ICON_OFFSET + 0x35, [0x3C, 0x0B, 0x75, 0x02, 0xB0]);
                 Hypervisor.Write<byte>(ICON_OFFSET + 0x3B, [0x88, 0x47, 0x01, 0xEB, 0xDC]);
 
-                // Write what icon it should be corrected to.
                 Hypervisor.Write<byte>(ICON_OFFSET + 0x3A, 0xCE);
 
-                // Adjustments to the shortcut filter mechanism to show the drives in the list:
-                // This one jumps out to a interrupt block so that we can inject code.
+                Hypervisor.Write<byte>(LIST_OFFSET + 0x18E, [0xEB, 0xAA]);
                 Hypervisor.Write<byte>(LIST_OFFSET + 0x138, [0xEB, 0x4E, 0x90, 0x90]);
-
-                // This one performs an OR operation and inserts the bit value 0x240000 so that
-                // both Drive Forms (0x200000) and Magic (0x40000) can show up.
                 Hypervisor.Write<byte>(LIST_OFFSET + 0x188, [0x81, 0xCB, 0x00, 0x00, 0x24, 0x00]);
 
-                // This jumps out of the interrupt block and continues execution.
-                Hypervisor.Write<byte>(LIST_OFFSET + 0x18E, [0xEB, 0xAA]);
-
-                // Adjustments to the equip filter mechanism to actually equip the shortcuts.
-                // This one wipes out the false condition and jumps out to a interrupt block so that we can inject code.
-                Hypervisor.Write<byte>(EQUIP_OFFSET + 0x16, [0xEB, 0x1B, 0x90, 0x90, 0x90, 0x90, 0x90]);
-
-                // This one performs a check for Drive Forms, if true, it jumps to the code that 
-                // handles non-magic shortcuts and their memorizaiton. 
                 Hypervisor.Write<byte>(EQUIP_OFFSET + 0x33, [0x80, 0xF9, 0x15, 0x74, 0xF2]);
-
-                // This re-implements the false condition.
+                Hypervisor.Write<byte>(EQUIP_OFFSET + 0x16, [0xEB, 0x1B, 0x90, 0x90, 0x90, 0x90, 0x90]);
                 Hypervisor.Write<byte>(EQUIP_OFFSET + 0x38, [0x31, 0xC0, 0x48, 0x83, 0xC4, 0x28, 0xC3]);
 
-                // This NOPs a jump statement which causes the equipped drive to be treated as a spell.
+                Hypervisor.Write<byte>(FORM_OFFSET + 0x12C, [0xEB, 0x45, 0x90, 0x90]);
+                Hypervisor.Write<byte>(FORM_OFFSET + 0x173, [0x81, 0xC3, 0x00, 0x00, 0x20, 0x00, 0xEB, 0xB5]);
+
                 Hypervisor.DeleteInstruction(CATEGORY_OFFSET + 0x4AF, 0x02);
+            }
+        }
+
+        public static void HandleCrown()
+        {
+            // Prepare the suffic according to the language.
+            var _suffixFile = (Variables.AUDIO_MODE == 0x00) ? ".a.us" : ".a.jp";
+
+            // Read the values.
+            var _loadRead = Hypervisor.Read<byte>(Variables.ADDR_LoadFlag);
+            var _cutsceneRead = Hypervisor.Read<byte>(Variables.ADDR_CutsceneFlag);
+            var _formRead = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x3524);
+
+            // If on the title, or the room ain't loaded, or the form changed: Wipe the cache.
+            if (Variables.IS_TITLE || _loadRead == 0x00 || PAST_FORM != _formRead)
+            {
+                LOAD_LIST = null;
+                PAST_FORM = _formRead;
+            }
+
+        RELOAD_POINT:
+
+            // If not in a cutscene or the Title Screen, and the room is loaded:
+            if (!Variables.IS_TITLE && _loadRead == 0x01 && _cutsceneRead == 0x00)
+            {
+                // Find the .a.xx files in game cache.
+                LOAD_LIST =
+                [
+                    Operations.FindFile("obj/P_EX100" + _suffixFile),
+                    Operations.FindFile("obj/P_EX100_BTLF" + _suffixFile),
+                    Operations.FindFile("obj/P_EX100_MAGF" + _suffixFile),
+                    Operations.FindFile("obj/P_EX100_KH1F" + _suffixFile),
+                    Operations.FindFile("obj/P_EX100_TRIF" + _suffixFile),
+                    Operations.FindFile("obj/P_EX100_ULTF" + _suffixFile),
+                    Operations.FindFile("obj/P_EX100_HTLF" + _suffixFile)
+                ];
+
+                // Fetch the pointers to the files.
+                var _soraPoints = new ulong[]
+                {
+                    LOAD_LIST[0] != Hypervisor.MemoryOffset ? Hypervisor.Read<ulong>(LOAD_LIST[0] + 0x58, true) : 0x00,
+                    LOAD_LIST[1] != Hypervisor.MemoryOffset ? Hypervisor.Read<ulong>(LOAD_LIST[1] + 0x58, true) : 0x00,
+                    LOAD_LIST[2] != Hypervisor.MemoryOffset ? Hypervisor.Read<ulong>(LOAD_LIST[2] + 0x58, true) : 0x00,
+                    LOAD_LIST[3] != Hypervisor.MemoryOffset ? Hypervisor.Read<ulong>(LOAD_LIST[3] + 0x58, true) : 0x00,
+                    LOAD_LIST[4] != Hypervisor.MemoryOffset ? Hypervisor.Read<ulong>(LOAD_LIST[4] + 0x58, true) : 0x00,
+                    LOAD_LIST[5] != Hypervisor.MemoryOffset ? Hypervisor.Read<ulong>(LOAD_LIST[5] + 0x58, true) : 0x00,
+                    LOAD_LIST[6] != Hypervisor.MemoryOffset ? Hypervisor.Read<ulong>(LOAD_LIST[6] + 0x58, true) : 0x00,
+                };
+
+                // Calculate the crown.
+                var _crownRead = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x36B2, 0x03);
+                var _crownSum = _crownRead[0] + _crownRead[1] + _crownRead[2];
+
+                // If something occured whilst reading: Re-fetch everything.
+                if (LOAD_LIST[_formRead] == 0xFFFFFFFFFFFFFFFF || _soraPoints[_formRead] > 0x7FFF00000000)
+                {
+                    LOAD_LIST = null;
+                    goto RELOAD_POINT;
+                }
+
+                // For every .a.xx found:
+                foreach (var _point in _soraPoints)
+                {
+                    // If the .a.xx file is valid:
+                    if (_point != 0x00)
+                    {
+                        // Fetch the offsets to the coords.
+                        var _barOffset = Hypervisor.Read<uint>(_point + 0x08, true);
+                        var _soraOffset = Hypervisor.Read<uint>(_point + 0x38, true) - _barOffset;
+
+                        var _faceCheck = Hypervisor.Read<uint>(_point + 0x24, true);
+
+                        // Ensure the .a.xx has a face.
+                        if (_faceCheck != 0x65636166)
+                            return;
+
+                        // Calculate the positions.
+                        var _topValue = 0x00 + _crownSum * 0x5A;
+                        var _bottomValue = 0x5D + _crownSum * 0x5A;
+
+                        // Write the positions.
+                        for (uint i = 0; i < 3; i++)
+                        {
+                            Hypervisor.Write(_point + _soraOffset + 0x38 + (0x2C * i), _topValue, true);
+                            Hypervisor.Write(_point + _soraOffset + 0x40 + (0x2C * i), _bottomValue, true);
+                        }
+                    }
+                }
             }
         }
     }
