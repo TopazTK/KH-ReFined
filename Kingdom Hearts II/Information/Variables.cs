@@ -1,4 +1,6 @@
-﻿using DiscordRPC;
+﻿#define STEAM_RELEASE
+
+using DiscordRPC;
 using Binarysharp.MSharp;
 
 using ReFined.KH2.Menus;
@@ -29,6 +31,8 @@ namespace ReFined.KH2.Information
         public static bool FORM_SHORTCUT = true;
 
         public static int AUDIO_MODE = 0x00;
+        public static int SUB_LANGUAGE = 0x00;
+
         public static bool ENEMY_VANILLA = true;
         public static bool MUSIC_VANILLA = false;
 
@@ -37,14 +41,22 @@ namespace ReFined.KH2.Information
 
         public static string LIMIT_SHORTS;
 
-        public static Config CONFIG_MENU;
         public static Intro INTRO_MENU;
+        public static Config CONFIG_MENU;
         public static Continue CONTINUE_MENU;
+
+        public static Intro.Entry AUDIO_SUB_INTRO;
+        public static Config.Entry AUDIO_SUB_CONFIG;
+
+        public static List<string> LOADED_LANGS = new List<string>();
 
         public static bool IS_TITLE =>
             Hypervisor.Read<uint>(ADDR_Area) == 0x00FFFFFF
          || Hypervisor.Read<uint>(ADDR_Area) == 0x00000101
          || Hypervisor.Read<uint>(ADDR_Reset) == 0x00000001;
+
+        public static bool IS_LOADED =>
+            Hypervisor.Read<byte>(ADDR_LoadFlag) == 0x01;
 
         //
         // RESOURCE LIBRARY
@@ -129,52 +141,85 @@ namespace ReFined.KH2.Information
         // All of the necessary address values.
         //
 
-        public static ulong ADDR_Reset = 0xABAC5A;
-        public static ulong ADDR_Input = 0xBF3270;
-        public static ulong ADDR_Confirm = 0x715382;
-
-        public static ulong ADDR_Area = 0x717008;
-        public static ulong ADDR_Title = 0x7169B4;
-        public static ulong ADDR_LoadFlag = 0x9BA8D0;
-        public static ulong ADDR_PauseFlag = 0x9006B0;
-        public static ulong ADDR_FinishFlag = 0xABC66C;
-        public static ulong ADDR_SubMenuType = 0x7435D4;
-
+        #if STEAM_RELEASE
+        public static ulong ADDR_Reset = 0x0ABAC5A;
+        public static ulong ADDR_Input = 0x0BF3270;
+        public static ulong ADDR_FadeValue = 0xABB3C7;
+        public static ulong ADDR_Confirm = 0x0715382;
+        public static ulong ADDR_Area = 0x0717008;
+        public static ulong ADDR_Title = 0x07169B4;
+        public static ulong ADDR_LoadFlag = 0x09BA8D0;
+        public static ulong ADDR_PauseFlag = 0x09006B0;
+        public static ulong ADDR_FinishFlag = 0x0ABC66C;
+        public static ulong ADDR_SubMenuType = 0x07435D4;
+        public static ulong ADDR_DialogSelect = 0x0902521;
         public static ulong ADDR_BattleFlag = 0x2A11404;
-        public static ulong ADDR_CutsceneFlag = 0x728440;
-
-        public static ulong ADDR_Config = 0x9ADA54;
-        public static ulong ADDR_NewGame = 0xB1D790;
-        public static ulong ADDR_SaveData = 0x9A98B0;
-
-        public static ulong ADDR_Framerate = 0x71536E;
-
-        public static ulong ADDR_Framelimiter = 0xABAC08;
+        public static ulong ADDR_CutsceneFlag = 0x0728440;
+        public static ulong ADDR_Config = 0x09ADA54;
+        public static ulong ADDR_SaveData = 0x09A98B0;
+        public static ulong ADDR_Framerate = 0x071536E;
+        public static ulong ADDR_Framelimiter = 0x0ABAC08;
         public static ulong ADDR_ControllerMode = 0x2B44A88;
-
-        public static ulong ADDR_ConfigMenu = 0x820000;
-        public static ulong ADDR_NewGameMenu = 0x820200;
-
+        public static ulong ADDR_ConfigMenu = 0x0820000;
+        public static ulong ADDR_NewGameMenu = 0x0820200;
+        public static ulong ADDR_IntroSelection = 0x0820500;
         public static ulong ADDR_ActionExe = 0x2A5C996;
+        public static ulong ADDR_MenuFlag = 0x717418;
         public static ulong ADDR_ReactionID = 0x2A11162;
-
-        public static ulong ADDR_MenuType = 0x900724;
-        public static ulong ADDR_MenuSelect = 0x902FA0;
-
+        public static ulong ADDR_MenuType = 0x0900724;
+        public static ulong ADDR_MenuSelect = 0x0902FA0;
         public static ulong ADDR_MagicCommands = 0x2A11188;
         public static ulong ADDR_MagicIndex = 0x2A1073C;
-        public static ulong ADDR_MagicLV1 = 0x9ACE44;
-        public static ulong ADDR_MagicLV2 = 0x9ACE7F;
-
-        public static ulong ADDR_MusicPath = 0x5B4C74;
-
-        public static ulong ADDR_PAXFormatter = 0x5C8590;
-        public static ulong ADDR_ANBFormatter = 0x5B8FB0;
-        public static ulong ADDR_EVTFormatter = 0x5B9020;
-        public static ulong ADDR_BTLFormatter = 0x5C5E48;
-
+        public static ulong ADDR_MagicLV1 = 0x09ACE44;
+        public static ulong ADDR_MagicLV2 = 0x09ACE7F;
+        public static ulong ADDR_MusicPath = 0x05B4C74;
+        public static ulong ADDR_PAXFormatter = 0x05C8590;
+        public static ulong ADDR_ANBFormatter = 0x05B8FB0;
+        public static ulong ADDR_EVTFormatter = 0x05B9020;
+        public static ulong ADDR_BTLFormatter = 0x05C5E48;
         public static ulong ADDR_ObjentryBASE = 0x2A254D0;
-        public static ulong ADDR_LimitShortcut = 0x5C9678;
+        public static ulong ADDR_LimitShortcut = 0x05C9678;
+        #endif
+
+        #if EPIC_RELEASE
+        public static ulong ADDR_FadeValue = 0xABAE47;
+        public static ulong ADDR_Reset = 0xABA6DA;
+        public static ulong ADDR_Input = 0x29FAD70;
+        public static ulong ADDR_Confirm = 0x714E02; 
+        public static ulong ADDR_Area = 0x716DF8;
+        public static ulong ADDR_Title = 0x7167A4;
+        public static ulong ADDR_LoadFlag = 0x9BA350;
+        public static ulong ADDR_PauseFlag = 0x900150;
+        public static ulong ADDR_FinishFlag = 0xABC0EC;
+        public static ulong ADDR_SubMenuType = 0x743354;
+        public static ulong ADDR_DialogSelect = 0x902480;
+        public static ulong ADDR_BattleFlag = 0x2A10E84;
+        public static ulong ADDR_CutsceneFlag = 0x7281C0;
+        public static ulong ADDR_Config = 0x9AD4D4;
+        public static ulong ADDR_SaveData = 0x9A9330;
+        public static ulong ADDR_Framerate = 0x714DEE;
+        public static ulong ADDR_Framelimiter = 0xABA688;
+        public static ulong ADDR_ControllerMode = 0x02B44A8;
+        public static ulong ADDR_ActionExe = 0x2A5C416;
+        public static ulong ADDR_ReactionID = 0x2A10BE2;
+        public static ulong ADDR_MenuType = 0x9001C4;
+        public static ulong ADDR_MenuSelect = 0x902A40;
+        public static ulong ADDR_MagicCommands = 0x2A10C08;
+        public static ulong ADDR_MagicIndex = 0x2A101BC;
+        public static ulong ADDR_MagicLV1 = 0x9AC8C4;
+        public static ulong ADDR_MagicLV2 = 0x9AC8FF;
+        public static ulong ADDR_ConfigMenu = 0x0820000;
+        public static ulong ADDR_IntroSelection = 0x0820500;
+        public static ulong ADDR_NewGameMenu = 0x0820200;
+        public static ulong ADDR_MusicPath = 0x5B4E34;
+        public static ulong ADDR_PAXFormatter = 0x5C8710;
+        public static ulong ADDR_ANBFormatter = 0x5B9140;
+        public static ulong ADDR_EVTFormatter = 0x5B91B0;
+        public static ulong ADDR_BTLFormatter = 0x5C5FB8;
+        public static ulong ADDR_ObjentryBASE = 0x2A24F50;
+        public static ulong ADDR_LimitShortcut = 0x5C97E8;
+        public static ulong ADDR_MenuFlag = 0x717418;
+        #endif
 
         //
         // POINTERS
@@ -238,6 +283,7 @@ namespace ReFined.KH2.Information
         public static string FUNC_ShortcutUpdate = "48 83 EC 28 E8 97 F9 FF FF 48 83 C4 28 E9 DE 02 00 00";
         public static string FUNC_ConfigUpdate = "40 53 55 56 57 41 54 41 55 41 56 41 57 48 83 EC 58 E8 ?? ?? ?? ?? 48 8B 0D ?? ?? ?? ?? 4C 8B F8 E8 ?? ?? ?? ??";
         public static string FUNC_SelectUpdate = "48 83 EC 28 48 8B 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 63 D0 48 8B 05 ?? ?? ?? ?? 48 0F BE 0C 02";
+        public static string FUNC_FadeCampWarning = "48 83 EC 28 85 C9 BA 0B 00 00 00 48 8B 0D ?? ?? ?? ?? B8 08 00 00 00 0F 44 D0 E8 ?? ?? ?? ?? 48 8B 0D ?? ?? ?? ??";
 
         //
         // HOTFIX SIGNATURES
@@ -255,7 +301,7 @@ namespace ReFined.KH2.Information
         public static string HFIX_ShortcutEquipFilter = "48 83 EC 28 E8 ?? ?? ?? ?? 0F B6 48 02 84 C9 74 19";
         public static string HFIX_ShortcutCategoryFilter = "48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 57 41 54 41 55 41 56 41 57 48 81 EC 90 01 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 80 01 00 00 33 F6 89 4C 24 28 85 C9 48 8D 05 ?? ?? ?? ??";
         public static string HFIX_FormInventory = "48 89 5C 24 18 57 48 83 EC 20 33 DB 48 89 6C 24 30 41 8B F8 48 8B E9";
-        
+
         public static string HFIX_ConfigFirst = "40 53 48 83 EC 20 0F B6 D9 48 8B 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 4C 8B 1D ?? ?? ?? ??";
         public static string HFIX_ConfigSecond = "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 41 54 41 55 41 56 41 57 48 81 EC 80 00 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 70 E8 ?? ?? ?? ?? 48 8B 0D ?? ?? ?? ??";
         public static string HFIX_ConfigThird = "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 30 48 8B 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 8B F8 E8 ?? ?? ?? ?? 8B F0 83 F8 02 0F 85 ?? ?? ?? ?? E8 ?? ?? ?? ?? 8B D8 E8 ?? ?? ?? ?? 84 C0 75 59 48 8B 0D ?? ?? ?? ??";
@@ -299,6 +345,13 @@ namespace ReFined.KH2.Information
         //
         // The various enums which will be used.
         //
+
+        public enum DIALOG_TYPE : int
+        {
+            NO_BUTTON = -1,
+            OK_BUTTON = 0,
+            YES_NO_BUTTON = 1
+        };
 
         public enum CONFIG_BITWISE : ushort
         {

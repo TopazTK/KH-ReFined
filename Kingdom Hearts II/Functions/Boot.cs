@@ -5,6 +5,7 @@ using ReFined.KH2.Information;
 using ReFined.KH2.InGame;
 
 using Binarysharp.MSharp;
+using System.Linq;
 
 namespace ReFined.KH2.Functions
 {
@@ -47,6 +48,7 @@ namespace ReFined.KH2.Functions
                 Message.OffsetShowSLWarning = Hypervisor.FindSignature(Variables.FUNC_ShowSLWarning);
                 Message.OffsetSetCampWarning = Hypervisor.FindSignature(Variables.FUNC_SetCampWarning);
                 Message.OffsetShowCampWarning = Hypervisor.FindSignature(Variables.FUNC_ShowCampWarning);
+                Message.OffsetFadeCampWarning = Hypervisor.FindSignature(Variables.FUNC_FadeCampWarning);
 
                 Critical.OffsetCampMenu = Hypervisor.FindSignature(Variables.FUNC_ExecuteCampMenu);
                 Critical.OffsetShutMusic = Hypervisor.FindSignature(Variables.FUNC_StopBGM);
@@ -95,21 +97,8 @@ namespace ReFined.KH2.Functions
                 Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroSixth));
                 Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroSeventh));
 
-                if (Operations.GetFileSize("itempic/item-271.imd") == 0x00)
-                {
-                    Terminal.Log("The Re:Fined Main Patch is either not installed or not detected! Please ensure you have installed \"KH-ReFined/KH2-MAIN\" and try again. Re:Fined will now terminate.", 0x02);
-
-                    Console.ReadKey(true);
-                    Environment.Exit(0);
-                }
-
-                if (Operations.GetFileSize("03system.bin") == 0x00)
-                {
-                    Terminal.Log("03system.bin is corrupted! This can be caused by not extracting the game before installation. Please reinstall the patch and try again. Re:Fined will now terminate.", 0x02);
-                    
-                    Console.ReadKey(true);
-                    Environment.Exit(0);
-                }
+                if (Operations.GetFileSize("itempic/item-271.imd") == 0x00) ;
+                if (Operations.GetFileSize("03system.bin") == 0x00) ;
 
                 Variables.INTRO_MENU = new Intro();
                 Variables.CONFIG_MENU = new Config();
@@ -117,13 +106,69 @@ namespace ReFined.KH2.Functions
 
                 if (!Variables.IS_LITE)
                 {
+                    Variables.LOADED_LANGS.Add(Operations.GetFileSize("voice/jp/battle/tt0_sora.win32.scd") != 0x00 ? "JP" : "");
+                    Variables.LOADED_LANGS.Add(Operations.GetFileSize("voice/de/battle/tt0_sora.win32.scd") != 0x00 ? "" : "");
+                    Variables.LOADED_LANGS.Add(Operations.GetFileSize("voice/es/battle/tt0_sora.win32.scd") != 0x00 ? "" : "");
+                    Variables.LOADED_LANGS.Add(Operations.GetFileSize("voice/bg/battle/tt0_sora.win32.scd") != 0x00 ? "" : "");
+
+                    ushort[][] _entryJP = !String.IsNullOrEmpty(Variables.LOADED_LANGS[0]) ? [[0x010E], [0x010F]] : [[], []];
+                    ushort[][] _entryDE = !String.IsNullOrEmpty(Variables.LOADED_LANGS[1]) ? [[0x0112], [0x0113]] : [[], []];
+                    ushort[][] _entryES = !String.IsNullOrEmpty(Variables.LOADED_LANGS[2]) ? [[0x0110], [0x0111]] : [[], []];
+                    ushort[][] _entryFR = !String.IsNullOrEmpty(Variables.LOADED_LANGS[3]) ? [[0x0114], [0x0115]] : [[], []];
+
+                    ushort _subDesc = 0x0117;
+                    ushort _subLabel = 0x0116;
+
+                    var _entAudioSub = new Config.Entry(0, 0x012B, [], []);
+                    var _entAudioMain = new Config.Entry(0, 0x010B, [0x010C], [0x010D]);
+
+                    _entAudioSub.Buttons.AddRange(_entryDE[0]);
+                    _entAudioSub.Buttons.AddRange(_entryES[0]);
+                    _entAudioSub.Buttons.AddRange(_entryFR[0]);
+                    
+                    _entAudioSub.Descriptions.AddRange(_entryDE[1]);
+                    _entAudioSub.Descriptions.AddRange(_entryES[1]);
+                    _entAudioSub.Descriptions.AddRange(_entryFR[1]);
+
+                    _entAudioMain.Buttons.AddRange(_entryJP[0]);
+                    _entAudioMain.Descriptions.AddRange(_entryJP[1]);
+
+                    if (_entAudioSub.Buttons.Count == 0x01)
+                    {
+                        _entAudioMain.Buttons.Add(_entAudioSub.Buttons[0]);
+                        _entAudioMain.Descriptions.Add(_entAudioSub.Descriptions[0]);
+                    }
+
+                    else if (_entAudioSub.Buttons.Count == 0x02 && String.IsNullOrEmpty(Variables.LOADED_LANGS[0]))
+                    {
+                        _entAudioMain.Buttons.Add(_entAudioSub.Buttons[0]);
+                        _entAudioMain.Descriptions.Add(_entAudioSub.Descriptions[0]);
+                        _entAudioMain.Buttons.Add(_entAudioSub.Buttons[1]);
+                        _entAudioMain.Descriptions.Add(_entAudioSub.Descriptions[1]);
+                    }
+
+                    else if (_entAudioSub.Buttons.Count > 0x01)
+                    {
+                        _entAudioMain.Buttons.Add(0x0116);
+                        _entAudioMain.Descriptions.Add(0x0117);
+
+                        if (String.IsNullOrEmpty(Variables.LOADED_LANGS[0]))
+                            Critical.AUDIO_SUB_ONLY = true;
+                    }
+
+                    _entAudioSub.Count = (ushort)_entAudioSub.Buttons.Count;
+                    _entAudioMain.Count = (ushort)_entAudioMain.Buttons.Count;
+
+                    Variables.LOADED_LANGS.RemoveAll(x => x == "");
+
                     Terminal.Log("Initializing Extra Options in the menus...", 0);
+                    Terminal.Log("Languages Found: " + String.Join(", ", Variables.LOADED_LANGS), 0);
 
                     Variables.FORM_SHORTCUT = Convert.ToBoolean(_configIni.Read("driveShortcuts", "Kingdom Hearts II"));
 
                     if (Operations.GetFileSize("obj/V_BB100.mdlx") != 0x00)
                     {
-                        Terminal.Log("An enemy palette pack was located! Adding the options for it...", 0);
+                        Terminal.Log("An Enemy Palette Pack was located! Adding the options for it...", 0);
 
                         var _entConfig = new Config.Entry(2, 0x011D, [0x011E, 0x0120], [0x011F, 0x0121]);
                         var _entIntro = new Intro.Entry(2, 0x0136, 0x0000, [0x011E, 0x0120], [0x011F, 0x0121]);
@@ -134,13 +179,26 @@ namespace ReFined.KH2.Functions
 
                     if (Operations.GetFileSize("bgm/ps2md050.win32.scd") != 0x00)
                     {
-                        Terminal.Log("A music pack was located! Adding the options for it...", 0);
+                        Terminal.Log("A Music Pack was located! Adding the options for it...", 0);
 
                         var _entConfig = new Config.Entry(2, 0x0118, [0x0119, 0x011B], [0x011A, 0x011C]);
                         var _entIntro = new Intro.Entry(2, 0x0135, 0x0000, [0x0119, 0x011B], [0x011A, 0x011C]);
 
                         Variables.CONFIG_MENU.Children.Insert(9, _entConfig);
                         Variables.INTRO_MENU.Children.Insert(2, _entIntro);
+                    }
+
+                    if (_entAudioMain.Count > 0x01)
+                    {
+                        Terminal.Log("At least one Language Pack was located! Adding the options for it...", 0);
+                        Variables.CONFIG_MENU.Children.Insert(9, _entAudioMain);
+                    }
+
+                    if ((_entAudioSub.Count > 0x01 && Variables.LOADED_LANGS[0] == "JP") || 
+                        (_entAudioSub.Count > 0x02 && Variables.LOADED_LANGS[0] != "JP"))
+                    {
+                        Terminal.Log("More than one European Language Pack located! Adjusting the options...", 0);
+                        Variables.AUDIO_SUB_CONFIG = _entAudioSub;
                     }
 
                     var _entRoxas = new Intro.Entry(2, 0x0130, 0x0000, [0x0138, 0x0139], [0x0131, 0x0132]);

@@ -28,8 +28,10 @@ namespace ReFined.KH2.Functions
 
         public static byte[]? WARP_FUNCTION;
         public static byte[]? INVT_FUNCTION;
+        public static bool AUDIO_SUB_ONLY;
 
         static Variables.CONFIG_BITWISE CONFIG_BIT;
+        static bool AUDIO_SUB_ACTIVE;
         static bool CONFIG_TOGGLE;
         static bool CONFIG_WRITTEN;
 
@@ -72,8 +74,6 @@ namespace ReFined.KH2.Functions
 
         public static void HandleMagicSort()
         {
-            var _loadRead = Hypervisor.Read<byte>(Variables.ADDR_LoadFlag);
-
             var _inputRead = Hypervisor.Read<ushort>(Variables.ADDR_Input);
             var _menuPointer = Hypervisor.Read<ulong>(Variables.PINT_ChildMenu);
 
@@ -95,7 +95,7 @@ namespace ReFined.KH2.Functions
                 ];
             }
 
-            if (_loadRead == 0x01 && MAGIC_STORE == null && _firstMagic != 0x00)
+            if (Variables.IS_LOADED && MAGIC_STORE == null && _firstMagic != 0x00)
             {
                 Terminal.Log("Detected a saved Magic sort! Reloading...", 0);
                 MAGIC_STORE = _readMagic;
@@ -119,7 +119,7 @@ namespace ReFined.KH2.Functions
             if (Variables.IS_TITLE)
                 MAGIC_STORE = null; 
 
-            if (_loadRead == 0x01 && ROOM_LOADED && _menuPointer != 0x00)
+            if (Variables.IS_LOADED && ROOM_LOADED && _menuPointer != 0x00)
             {
                 if (MAGIC_STORE != null)
                 {
@@ -130,10 +130,10 @@ namespace ReFined.KH2.Functions
                 ROOM_LOADED = false;
             }
 
-            else if (_loadRead == 0x00 && !ROOM_LOADED)
+            else if (!Variables.IS_LOADED && !ROOM_LOADED)
                 ROOM_LOADED = true;
 
-            if (_menuPointer != 0x00 && _loadRead == 0x01)
+            if (_menuPointer != 0x00 && Variables.IS_LOADED)
             {
                 var _menuRead = Hypervisor.Read<byte>(_menuPointer, true);
 
@@ -207,7 +207,6 @@ namespace ReFined.KH2.Functions
         public static void HandleAutosave()
         {
             var _worldCheck = Hypervisor.Read<byte>(Variables.ADDR_Area);
-            var _loadRead = Hypervisor.Read<byte>(Variables.ADDR_LoadFlag);
             var _pauseCheck = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag);
             var _roomCheck = Hypervisor.Read<byte>(Variables.ADDR_Area + 0x01);
 
@@ -217,17 +216,13 @@ namespace ReFined.KH2.Functions
                 (_worldCheck == 0x12 && _roomCheck >= 0x13 && _roomCheck <= 0x1D) ||
                 (_worldCheck == 0x02 && _roomCheck <= 0x01);
 
-            if (!Variables.IS_TITLE && _loadRead == 0x01 && !_blacklistCheck)
+            if (!Variables.IS_TITLE && Variables.IS_LOADED && !_blacklistCheck)
             {
                 var _battleRead = Hypervisor.Read<byte>(Variables.ADDR_BattleFlag);
                 var _cutsceneRead = Hypervisor.Read<byte>(Variables.ADDR_CutsceneFlag);
 
-                _loadRead = Hypervisor.Read<byte>(Variables.ADDR_LoadFlag);
-
-
-                var _saveableBool = (Variables.SAVE_MODE != 0x02) &&
+                var _saveableBool = (Variables.SAVE_MODE != 0x02) && Variables.IS_LOADED &&
                                     _battleRead == 0x00 &&
-                                    _loadRead == 0x01 &&
                                     _cutsceneRead == 0x00 &&
                                     _worldCheck >= 0x02 &&
                                     _pauseCheck == 0x00 &&
@@ -280,7 +275,7 @@ namespace ReFined.KH2.Functions
                 var _musicMode = Variables.CONFIG_BITWISE.OFF;
                 var _enemyMode = Variables.CONFIG_BITWISE.OFF;
 
-                var _readState = Hypervisor.Read<int>(0x820500, 0x100);
+                var _readState = Hypervisor.Read<int>(Variables.ADDR_IntroSelection, 0x100);
 
                 var _vibration = _readState[0x01] == 0x00 ? Variables.CONFIG_BITWISE.VIBRATION : Variables.CONFIG_BITWISE.OFF;
 
@@ -340,15 +335,19 @@ namespace ReFined.KH2.Functions
 
             var _selectPoint = Hypervisor.Read<ulong>(Variables.PINT_SubMenuOptionSelect);
 
-            var _loadRead = Hypervisor.Read<byte>(Variables.ADDR_LoadFlag);
             var _pauseRead = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag);
             var _menuRead = Hypervisor.Read<byte>(Variables.ADDR_SubMenuType);
 
             var _settingsPoint = Hypervisor.Read<ulong>(Variables.PINT_ConfigMenu);
             var _difficultyRead = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x2498);
 
+            var _audioActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x010B) == null ? false : true;
             var _musicActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x0118) == null ? false : true;
             var _enemyActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x011D) == null ? false : true;
+
+            var _offsetAudio = Convert.ToInt32(_audioActive) + Convert.ToInt32(AUDIO_SUB_ACTIVE);
+            var _offsetMusic = Convert.ToInt32(_audioActive) + Convert.ToInt32(_musicActive) + Convert.ToInt32(AUDIO_SUB_ACTIVE);
+            var _offsetEnemy = Convert.ToInt32(_audioActive) + Convert.ToInt32(_musicActive) + Convert.ToInt32(_enemyActive) + Convert.ToInt32(AUDIO_SUB_ACTIVE);
 
             if (!Variables.IS_TITLE && !LOADED_SETTINGS)
             {
@@ -358,6 +357,7 @@ namespace ReFined.KH2.Functions
                 {
                     Variables.MUSIC_VANILLA = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.MUSIC_VANILLA);
                     Variables.ENEMY_VANILLA = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.HEARTLESS_VANILLA);
+                    Variables.AUDIO_MODE = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUDIO_JAPANESE) ? 0x01 : (_configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUDIO_OTHER) ? 0x02 : 0x00);
                 }
 
                 Variables.CONTROLLER_MODE = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.PROMPT_CONTROLLER);
@@ -373,7 +373,6 @@ namespace ReFined.KH2.Functions
 
             if (_menuRead == 0x24 && _pauseRead == 0x01 && _selectPoint != 0x00)
             {
-
                 if (_settingsPoint != 0x00 && !DEBOUNCE[6])
                 {
                     Terminal.Log("Config Menu has been opened! Setting up necessary stuff.", 0);
@@ -407,16 +406,40 @@ namespace ReFined.KH2.Functions
 
                     if (!Variables.IS_LITE)
                     {
+                        var _audioToggle = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUDIO_JAPANESE) ? 0x01 :
+                                          (_configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUDIO_OTHER) ? 0x02 : 0x00);
+                        
+                        var _musicClassic = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.MUSIC_VANILLA) ? 0x00 : 0x01;
+                        var _heartlessClassic = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.HEARTLESS_VANILLA) ? 0x00 : 0x01;
+                        
                         if (_enemyActive)
-                        {
-                            var _heartlessClassic = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.HEARTLESS_VANILLA) ? 0x00 : 0x01;
                             SETTINGS_READ.Insert(0x09, Convert.ToByte(_heartlessClassic));
-                        }
 
                         if (_musicActive)
-                        {
-                            var _musicClassic = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.MUSIC_VANILLA) ? 0x00 : 0x01;
                             SETTINGS_READ.Insert(0x09, Convert.ToByte(_musicClassic));
+
+                        if (_audioActive)
+                        {
+                            SETTINGS_READ.Insert(0x09, Convert.ToByte(_audioToggle));
+
+                            if (Variables.AUDIO_SUB_CONFIG != null)
+                            {
+                                var _toggleSeek = AUDIO_SUB_ONLY ? 0x01 : 0x02;
+                                var _fetchConfig = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == Variables.AUDIO_SUB_CONFIG.Title);
+
+                                if (_audioToggle == _toggleSeek && _fetchConfig == null)
+                                {
+                                    Variables.CONFIG_MENU.Children.Insert(0x0A, Variables.AUDIO_SUB_CONFIG);
+                                    SETTINGS_READ.Insert(0x0A, Convert.ToByte(0x00));
+                                    AUDIO_SUB_ACTIVE = true;
+                                }
+
+                                else if (_audioToggle != _toggleSeek && _fetchConfig != null)
+                                {
+                                    Variables.CONFIG_MENU.Children.Remove(Variables.AUDIO_SUB_CONFIG);
+                                    AUDIO_SUB_ACTIVE = false;
+                                }
+                            }
                         }
                     }
 
@@ -429,7 +452,7 @@ namespace ReFined.KH2.Functions
                 }
 
                 // We have entered the menu.
-                if (_loadRead == 0x01)
+                if (Variables.IS_LOADED)
                     ENTER_CONFIG = true;
 
                 SETTINGS_WRITE = Hypervisor.Read<byte>(_settingsPoint, SETTINGS_READ.Count(), true);
@@ -452,16 +475,20 @@ namespace ReFined.KH2.Functions
 
                 var _vibrationBit = SETTINGS_WRITE[0x08] == 0x00 ? Variables.CONFIG_BITWISE.VIBRATION : Variables.CONFIG_BITWISE.OFF;
 
-                var _musicBit = SETTINGS_WRITE[0x09] == 0x00 ? Variables.CONFIG_BITWISE.MUSIC_VANILLA : Variables.CONFIG_BITWISE.OFF;
-                var _enemyBit = SETTINGS_WRITE[0x0A] == 0x00 ? Variables.CONFIG_BITWISE.HEARTLESS_VANILLA : Variables.CONFIG_BITWISE.OFF;
-
-                var _commandBit = SETTINGS_WRITE[0x09 + Convert.ToInt32(_musicActive) + Convert.ToInt32(_enemyActive)] == 0x01 ? Variables.CONFIG_BITWISE.COMMAND_KH2 : Variables.CONFIG_BITWISE.OFF;
+                var _commandBit = SETTINGS_WRITE[0x09 + _offsetEnemy] == 0x01 ? Variables.CONFIG_BITWISE.COMMAND_KH2 : Variables.CONFIG_BITWISE.OFF;
 
                 Variables.SAVE_MODE = SETTINGS_WRITE[0x06];
                 Variables.CONTROLLER_MODE = SETTINGS_WRITE[0x07] == 0x00 ? true : false;
 
-                Variables.MUSIC_VANILLA = SETTINGS_WRITE[0x09] == 0x00 ? true : false;
-                Variables.ENEMY_VANILLA = SETTINGS_WRITE[0x0A] == 0x00 ? true : false;
+                var _audioBit = SETTINGS_WRITE[0x09] == 0x01 ? Variables.CONFIG_BITWISE.AUDIO_JAPANESE : 
+                               (SETTINGS_WRITE[0x09] == 0x02 ? Variables.CONFIG_BITWISE.AUDIO_OTHER : Variables.CONFIG_BITWISE.OFF);
+
+                var _musicBit = SETTINGS_WRITE[0x09 + _offsetAudio] == 0x00 ? Variables.CONFIG_BITWISE.MUSIC_VANILLA : Variables.CONFIG_BITWISE.OFF;
+                var _enemyBit = SETTINGS_WRITE[0x09 + _offsetMusic] == 0x00 ? Variables.CONFIG_BITWISE.HEARTLESS_VANILLA : Variables.CONFIG_BITWISE.OFF;
+               
+                Variables.AUDIO_MODE = SETTINGS_WRITE[0x09];
+                Variables.MUSIC_VANILLA = SETTINGS_WRITE[0x09 + _offsetAudio] == 0x00 ? true : false;
+                Variables.ENEMY_VANILLA = SETTINGS_WRITE[0x09 + _offsetMusic] == 0x00 ? true : false;
 
                 var _writeBitwise =
                     _fieldCamBit |
@@ -475,18 +502,25 @@ namespace ReFined.KH2.Functions
                     _vibrationBit |
                     _commandBit;
 
-                if (!Variables.IS_LITE)
-                    _writeBitwise = _writeBitwise | _musicBit | _enemyBit;
+                 if (!Variables.IS_LITE)
+                    _writeBitwise = _writeBitwise | _audioBit | _musicBit | _enemyBit;
 
                 Hypervisor.Write(Variables.ADDR_Config, _writeBitwise);
+
+                var _toggleBit = AUDIO_SUB_ONLY ? Variables.CONFIG_BITWISE.AUDIO_JAPANESE : Variables.CONFIG_BITWISE.AUDIO_OTHER;
+
+                if ((Variables.AUDIO_SUB_CONFIG != null && _audioBit == _toggleBit && !AUDIO_SUB_ACTIVE) ||
+                    (Variables.AUDIO_SUB_CONFIG != null && _audioBit != _toggleBit && AUDIO_SUB_ACTIVE))
+                    DEBOUNCE[6] = false;
             }
 
             else if (_selectPoint == 0x00 && ENTER_CONFIG && SETTINGS_READ != null && SETTINGS_WRITE != null)
             {
-                var _checkMusic = SETTINGS_WRITE[0x09] == SETTINGS_READ[0x09];
-                var _checkEnemy = SETTINGS_WRITE[0x0A] == SETTINGS_READ[0x0A];
+                var _checkAudio = SETTINGS_WRITE[0x09] == SETTINGS_READ[0x09];
+                var _checkMusic = SETTINGS_WRITE[0x09 + _offsetAudio] == SETTINGS_READ[0x09 + _offsetAudio];
+                var _checkEnemy = SETTINGS_WRITE[0x09 + _offsetMusic] == SETTINGS_READ[0x09 + _offsetMusic];
 
-                if (!Variables.IS_LITE && ((!_checkMusic && _musicActive) || (!_checkEnemy && _checkEnemy)))
+                if (!Variables.IS_LITE && ((!_checkAudio && _audioActive) || (!_checkMusic && _musicActive) || (!_checkEnemy && _enemyActive)))
                 {
                     LOCK_AUTOSAVE = true;
 
@@ -496,7 +530,7 @@ namespace ReFined.KH2.Functions
                     DEBOUNCE[6] = false;
 
                     // Give time for the Menu to close.
-                    while (Hypervisor.Read<byte>(0x717418) != 1) ;
+                    while (Hypervisor.Read<byte>(Variables.ADDR_MenuFlag) != 0x01) ;
 
                     Terminal.Log("Killing the background music.", 0);
                     Variables.SharpHook[OffsetShutMusic].Execute();
@@ -521,14 +555,14 @@ namespace ReFined.KH2.Functions
                     Variables.SharpHook[OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Hypervisor.PureAddress + Variables.ADDR_Area), 2, 0, 0, 0);
 
                     // Wait until the fade has been completed.
-                    while (Hypervisor.Read<byte>(0xABB3C7) != 0x80) ;
+                    while (Hypervisor.Read<byte>(Variables.ADDR_FadeValue) != 0x80) ;
 
                     // Destroy the fade handler so it does not cause issues.
                     Hypervisor.DeleteInstruction((ulong)(OffsetSetFadeOff + 0x81A), 0x08);
-                    Hypervisor.Write<byte>(0xABB3C7, 0x80);
+                    Hypervisor.Write<byte>(Variables.ADDR_FadeValue, 0x80);
 
                     // Whilst not loaded, constantly shut off the music.
-                    while (Hypervisor.Read<byte>(Variables.ADDR_LoadFlag) != 1)
+                    while (!Variables.IS_LOADED)
                         Variables.SharpHook[OffsetShutMusic].Execute();
 
                     Variables.SharpHook[OffsetSetFadeOff].Execute(0x02);
@@ -540,7 +574,7 @@ namespace ReFined.KH2.Functions
                     Variables.SharpHook[OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Hypervisor.PureAddress + Variables.ADDR_Area), 2, 0, 0, 0);
 
                     // Wait until load.
-                    while (Hypervisor.Read<byte>(Variables.ADDR_LoadFlag) != 1) ;
+                    while (!Variables.IS_LOADED) ;
 
                     // Restore the fade initiater after load.
                     Hypervisor.Write<byte>((ulong)(OffsetSetFadeOff + 0x81A), [ 0xF3, 0x0F, 0x11, 0x8F, 0x0C, 0x01, 0x00, 0x00 ]);
@@ -877,12 +911,11 @@ namespace ReFined.KH2.Functions
             var _suffixFile = (Variables.AUDIO_MODE == 0x00) ? ".a.us" : ".a.jp";
 
             // Read the values.
-            var _loadRead = Hypervisor.Read<byte>(Variables.ADDR_LoadFlag);
             var _cutsceneRead = Hypervisor.Read<byte>(Variables.ADDR_CutsceneFlag);
             var _formRead = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x3524);
 
             // If on the title, or the room ain't loaded, or the form changed: Wipe the cache.
-            if (Variables.IS_TITLE || _loadRead == 0x00 || PAST_FORM != _formRead)
+            if (Variables.IS_TITLE || !Variables.IS_LOADED || PAST_FORM != _formRead)
             {
                 LOAD_LIST = null;
                 PAST_FORM = _formRead;
@@ -891,7 +924,7 @@ namespace ReFined.KH2.Functions
         RELOAD_POINT:
 
             // If not in a cutscene or the Title Screen, and the room is loaded:
-            if (!Variables.IS_TITLE && _loadRead == 0x01 && _cutsceneRead == 0x00)
+            if (!Variables.IS_TITLE && Variables.IS_LOADED && _cutsceneRead == 0x00)
             {
                 // Find the .a.xx files in game cache.
                 LOAD_LIST =

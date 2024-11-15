@@ -4,6 +4,7 @@ using ReFined.KH2.InGame;
 using ReFined.KH2.Information;
 using BSharpConvention = Binarysharp.MSharp.Assembly.CallingConvention.CallingConventions;
 using System.Linq;
+using DiscordRPC;
 
 namespace ReFined.KH2.Functions
 {
@@ -39,9 +40,7 @@ namespace ReFined.KH2.Functions
             var _buttonRead = Hypervisor.Read<ushort>(Variables.ADDR_Input);
             var _confirmRead = Hypervisor.Read<ushort>(Variables.ADDR_Confirm);
 
-            var _loadRead = Hypervisor.Read<byte>(Variables.ADDR_LoadFlag);
-
-            var _canReset = !Variables.IS_TITLE && _loadRead == 0x01;
+            var _canReset = !Variables.IS_TITLE && Variables.IS_LOADED;
 
             if (_buttonRead == Variables.RESET_COMBO && _canReset && !DEBOUNCE[0])
             {
@@ -95,11 +94,9 @@ namespace ReFined.KH2.Functions
         public static void TriggerEncounter()
         {
             var _roomPoint = Hypervisor.Read<ulong>(Variables.PINT_EnemyInfo) + 0x08;
-
-            var _roomRead = Hypervisor.Read<byte>(Variables.ADDR_LoadFlag);
             var _abilityRead = Hypervisor.Read<ushort>(Variables.ADDR_SaveData + 0x2544, 0x60);
 
-            if (!Variables.IS_TITLE && _roomRead == 0x01 && !DEBOUNCE[2] && !_abilityRead.Contains<ushort>(0x80F8) && !_abilityRead.Contains<ushort>(0x00F8))
+            if (!Variables.IS_TITLE && Variables.IS_LOADED && !DEBOUNCE[2] && !_abilityRead.Contains<ushort>(0x80F8) && !_abilityRead.Contains<ushort>(0x00F8))
             {
                 var _fetchIndex = Array.FindIndex(_abilityRead, x => x == 0x0000);
 
@@ -112,14 +109,14 @@ namespace ReFined.KH2.Functions
             else if (Variables.IS_TITLE && DEBOUNCE[2])
                 DEBOUNCE[2] = false;
 
-            if (_roomRead == 0x00 && _abilityRead.Contains<ushort>(0x80F8) && !DEBOUNCE[3] && Critical.AREA_READ == null)
+            if (!Variables.IS_LOADED && _abilityRead.Contains<ushort>(0x80F8) && !DEBOUNCE[3] && Critical.AREA_READ == null)
             {
                 Terminal.Log("Enemy data has been cleared!", 0);
                 Hypervisor.Write(_roomPoint, new byte[0x100], true);
                 DEBOUNCE[3] = true;
             }
 
-            else if (_roomRead == 0x01 && DEBOUNCE[3])
+            else if (Variables.IS_LOADED && DEBOUNCE[3])
                 DEBOUNCE[3] = false;
         }
 
@@ -166,11 +163,11 @@ namespace ReFined.KH2.Functions
                         Hypervisor.DeleteInstruction((ulong)(Critical.OffsetSetFadeOff + 0x81A), 0x08);
                         Hypervisor.Write<byte>(0xABB3C7, 0x80);
 
-                        while (Hypervisor.Read<byte>(Variables.ADDR_LoadFlag) == 0x00) ;
+                        while (!Variables.IS_LOADED) ;
 
                         Variables.SharpHook[Critical.OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Hypervisor.PureAddress + Variables.ADDR_Area), 2, 0, 0, 0);
 
-                        while (Hypervisor.Read<byte>(Variables.ADDR_LoadFlag) == 0x00) ;
+                        while (!Variables.IS_LOADED) ;
 
                         Hypervisor.Write<byte>((ulong)(Critical.OffsetSetFadeOff + 0x81A), [0xF3, 0x0F, 0x11, 0x8F, 0x0C, 0x01, 0x00, 0x00]);
 
@@ -195,7 +192,7 @@ namespace ReFined.KH2.Functions
                     Hypervisor.Write<uint>(Variables.ADDR_Area + 0x04, 0x02);
                     Hypervisor.Write<uint>(Variables.ADDR_Area + 0x08, 0x12);
 
-                    while (Hypervisor.Read<byte>(Variables.ADDR_LoadFlag) == 0x00) ;
+                    while (!Variables.IS_LOADED) ;
 
                     Variables.SharpHook[Critical.OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Hypervisor.PureAddress + Variables.ADDR_Area), 2, 0, 0, 0);
 
@@ -768,13 +765,12 @@ namespace ReFined.KH2.Functions
         {
             if (!UPDATE_TRIGGERED)
             {
-                var _isLoaded = Hypervisor.Read<byte>(Variables.ADDR_LoadFlag) == 0x01 ? true : false;
                 var _isPaused = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag) == 0x01 ? true : false;
                 var _menuType = Hypervisor.Read<byte>(Variables.ADDR_MenuType);
 
-                var UPDATE_TEXTAbsolute = Operations.FetchPointerMSG(Variables.PINT_SystemMSG, 0x0129);
+                var _updateTextAbsolute = Operations.FetchPointerMSG(Variables.PINT_SystemMSG, 0x0129);
 
-                if (!Variables.IS_TITLE && _isLoaded)
+                if (!Variables.IS_TITLE && Variables.IS_LOADED)
                 {
                     Critical.LOCK_AUTOSAVE = true;
 
@@ -812,62 +808,50 @@ namespace ReFined.KH2.Functions
                             _tempText.AddRange(UPDATE_TEXT.Skip(UPDATE_BAR_INDEX + 20));
                            
                             UPDATE_TEXT = _tempText.ToArray();
-                            Hypervisor.Write(UPDATE_TEXTAbsolute, UPDATE_TEXT, true);
+                            Hypervisor.Write(_updateTextAbsolute, UPDATE_TEXT, true);
                         }
 
                         if (UPDATE_PHASE == 0x00)
                         {
-                            Variables.SharpHook[Message.OffsetSetCampWarning].ExecuteJMP(BSharpConvention.MicrosoftX64, 0x0128, 0x0000);
-                            Variables.SharpHook[Message.OffsetShowCampWarning].Execute(0x01);
-                            Variables.SharpHook[Message.OffsetMenu].Execute(BSharpConvention.MicrosoftX64, 0x04, 0x00);
-                            Variables.SharpHook[Message.OffsetMenu + 0x40].Execute();
+                            var _result = Message.ShowDialogCamp(0x0128, Variables.DIALOG_TYPE.YES_NO_BUTTON);
 
-                            UPDATE_PHASE = 0x01;
-                        }
+                            if (_result)
+                                UPDATE_PHASE = 0x01;
 
-                        if (UPDATE_PHASE == 0x01)
-                        {
-                            if (_isConfirming && _selectRead == 0x00)
-                                UPDATE_PHASE = 2;
-
-                            else if ((_isConfirming && _selectRead == 0x01) || _isDenying)
+                            if (!_result)
                             {
                                 UPDATE_TRIGGERED = true;
                                 UPDATE_PHASE = 0;
                             }
                         }
 
-                        if (UPDATE_PHASE == 0x02)
+                        if (UPDATE_PHASE == 0x01)
                         {
-                            Variables.SharpHook[0x304B30].Execute();
-                            Thread.Sleep(300);
+                            
 
                             Variables.SharpHook[Message.OffsetSetCampWarning].ExecuteJMP(BSharpConvention.MicrosoftX64, 0x0129, 0x0000);
-                            
+
                             for (int i = 0; i < 100; i++)
                             {
                                 var _downProgress = Math.Floor(i / 5D);
-                                Hypervisor.Write(UPDATE_TEXTAbsolute + (ulong)UPDATE_BAR_INDEX + (ulong)_downProgress, (byte)0x6A, true);
-                                Hypervisor.Write(UPDATE_TEXTAbsolute + (uint)UPDATE_PRG_INDEX, i.ToString("000").ToKHSCII(), true);
+                                Hypervisor.Write(_updateTextAbsolute + (ulong)UPDATE_BAR_INDEX + (ulong)_downProgress, (byte)0x6A, true);
+                                Hypervisor.Write(_updateTextAbsolute + (uint)UPDATE_PRG_INDEX, i.ToString("000").ToKHSCII(), true);
                                 Thread.Sleep(250);
                             }
 
-                            Hypervisor.Write(UPDATE_TEXTAbsolute, UPDATE_DONE_TEXT, true);
+                            Hypervisor.Write(_updateTextAbsolute, UPDATE_DONE_TEXT, true);
 
                             Variables.SharpHook[Message.OffsetShowCampWarning].Execute();
                             Variables.SharpHook[Message.OffsetMenu].Execute(BSharpConvention.MicrosoftX64, 0x04, 0x00);
                             Variables.SharpHook[Message.OffsetMenu + 0x40].Execute();
 
-                            UPDATE_PHASE = 0x03;
+                            UPDATE_PHASE = 0x02;
                         }
 
-                        if (UPDATE_PHASE == 0x03)
+                        if (UPDATE_PHASE == 0x02 && (_isConfirming || _isDenying))
                         {
-                            if (_isConfirming || _isDenying)
-                            {
-                                UPDATE_TRIGGERED = true;
-                                Critical.LOCK_AUTOSAVE = false;
-                            }
+                            UPDATE_TRIGGERED = true;
+                            Critical.LOCK_AUTOSAVE = false;
                         }
                     }
                 }

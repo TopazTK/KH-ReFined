@@ -1,7 +1,7 @@
 ﻿
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-
+using System.Data.SqlTypes;
 using ReFined.Common;
 using ReFined.KH2.Information;
 using ReFined.Libraries;
