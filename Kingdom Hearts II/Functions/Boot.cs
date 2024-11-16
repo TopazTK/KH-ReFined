@@ -106,9 +106,9 @@ namespace ReFined.KH2.Functions
 
                 if (!Variables.IS_LITE)
                 {
-                    Variables.LOADED_LANGS.Add(Operations.GetFileSize("voice/jp/battle/tt0_sora.win32.scd") != 0x00 ? "JP" : "");
+                    Variables.LOADED_LANGS.Add(Operations.GetFileSize("voice/jp/battle/tt0_sora.win32.scd") != 0x00 ? "JP" : "JP");
                     Variables.LOADED_LANGS.Add(Operations.GetFileSize("voice/de/battle/tt0_sora.win32.scd") != 0x00 ? "" : "");
-                    Variables.LOADED_LANGS.Add(Operations.GetFileSize("voice/es/battle/tt0_sora.win32.scd") != 0x00 ? "" : "");
+                    Variables.LOADED_LANGS.Add(Operations.GetFileSize("voice/es/battle/tt0_sora.win32.scd") != 0x00 ? "ES" : "ES");
                     Variables.LOADED_LANGS.Add(Operations.GetFileSize("voice/bg/battle/tt0_sora.win32.scd") != 0x00 ? "" : "");
 
                     ushort[][] _entryJP = !String.IsNullOrEmpty(Variables.LOADED_LANGS[0]) ? [[0x010E], [0x010F]] : [[], []];
@@ -119,45 +119,56 @@ namespace ReFined.KH2.Functions
                     ushort _subDesc = 0x0117;
                     ushort _subLabel = 0x0116;
 
-                    var _entAudioSub = new Config.Entry(0, 0x012B, [], []);
-                    var _entAudioMain = new Config.Entry(0, 0x010B, [0x010C], [0x010D]);
+                    var _cfgAudioSub = new Config.Entry(0, 0x012B, [], []);
+                    var _cfgAudioMain = new Config.Entry(0, 0x010B, [0x010C], [0x010D]);
 
-                    _entAudioSub.Buttons.AddRange(_entryDE[0]);
-                    _entAudioSub.Buttons.AddRange(_entryES[0]);
-                    _entAudioSub.Buttons.AddRange(_entryFR[0]);
+                    var _intAudioSub = new Intro.Entry(0, 0x013A, 0x0000, [], []);
+                    var _intAudioMain = new Intro.Entry(0, 0x0134, 0x0000, [0x010C], [0x010D]);
+
+                    _cfgAudioSub.Buttons.AddRange(_entryDE[0]);
+                    _cfgAudioSub.Buttons.AddRange(_entryES[0]);
+                    _cfgAudioSub.Buttons.AddRange(_entryFR[0]);
                     
-                    _entAudioSub.Descriptions.AddRange(_entryDE[1]);
-                    _entAudioSub.Descriptions.AddRange(_entryES[1]);
-                    _entAudioSub.Descriptions.AddRange(_entryFR[1]);
+                    _cfgAudioSub.Descriptions.AddRange(_entryDE[1]);
+                    _cfgAudioSub.Descriptions.AddRange(_entryES[1]);
+                    _cfgAudioSub.Descriptions.AddRange(_entryFR[1]);
 
-                    _entAudioMain.Buttons.AddRange(_entryJP[0]);
-                    _entAudioMain.Descriptions.AddRange(_entryJP[1]);
+                    _intAudioSub.Buttons = _cfgAudioSub.Buttons.Select(x => (uint)x).ToList();
+                    _intAudioSub.Descriptions = _cfgAudioSub.Descriptions.Select(x => (uint)x).ToList();
 
-                    if (_entAudioSub.Buttons.Count == 0x01)
+                    _cfgAudioMain.Buttons.AddRange(_entryJP[0]);
+                    _cfgAudioMain.Descriptions.AddRange(_entryJP[1]);
+
+                    if (_cfgAudioSub.Buttons.Count == 0x01)
                     {
-                        _entAudioMain.Buttons.Add(_entAudioSub.Buttons[0]);
-                        _entAudioMain.Descriptions.Add(_entAudioSub.Descriptions[0]);
+                        _cfgAudioMain.Buttons.Add(_cfgAudioSub.Buttons[0]);
+                        _cfgAudioMain.Descriptions.Add(_cfgAudioSub.Descriptions[0]);
                     }
 
-                    else if (_entAudioSub.Buttons.Count == 0x02 && String.IsNullOrEmpty(Variables.LOADED_LANGS[0]))
+                    else if (_cfgAudioSub.Buttons.Count == 0x02 && String.IsNullOrEmpty(Variables.LOADED_LANGS[0]))
                     {
-                        _entAudioMain.Buttons.Add(_entAudioSub.Buttons[0]);
-                        _entAudioMain.Descriptions.Add(_entAudioSub.Descriptions[0]);
-                        _entAudioMain.Buttons.Add(_entAudioSub.Buttons[1]);
-                        _entAudioMain.Descriptions.Add(_entAudioSub.Descriptions[1]);
+                        _cfgAudioMain.Buttons.Add(_cfgAudioSub.Buttons[0]);
+                        _cfgAudioMain.Descriptions.Add(_cfgAudioSub.Descriptions[0]);
+                        _cfgAudioMain.Buttons.Add(_cfgAudioSub.Buttons[1]);
+                        _cfgAudioMain.Descriptions.Add(_cfgAudioSub.Descriptions[1]);
                     }
 
-                    else if (_entAudioSub.Buttons.Count > 0x01)
+                    else if (_cfgAudioSub.Buttons.Count > 0x01)
                     {
-                        _entAudioMain.Buttons.Add(0x0116);
-                        _entAudioMain.Descriptions.Add(0x0117);
+                        _cfgAudioMain.Buttons.Add(0x0116);
+                        _cfgAudioMain.Descriptions.Add(0x0117);
 
                         if (String.IsNullOrEmpty(Variables.LOADED_LANGS[0]))
                             Critical.AUDIO_SUB_ONLY = true;
                     }
 
-                    _entAudioSub.Count = (ushort)_entAudioSub.Buttons.Count;
-                    _entAudioMain.Count = (ushort)_entAudioMain.Buttons.Count;
+                    _intAudioMain.Buttons = _cfgAudioMain.Buttons.Select(x => (uint)x).ToList();
+                    _intAudioMain.Descriptions = _cfgAudioMain.Descriptions.Select(x => (uint)x).ToList();
+
+                    _cfgAudioSub.Count = (ushort)_cfgAudioSub.Buttons.Count;
+                    _cfgAudioMain.Count = (ushort)_cfgAudioMain.Buttons.Count;                    
+                    _intAudioSub.Count = (ushort)_intAudioSub.Buttons.Count;
+                    _intAudioMain.Count = (ushort)_intAudioMain.Buttons.Count;
 
                     Variables.LOADED_LANGS.RemoveAll(x => x == "");
 
@@ -173,8 +184,8 @@ namespace ReFined.KH2.Functions
                         var _entConfig = new Config.Entry(2, 0x011D, [0x011E, 0x0120], [0x011F, 0x0121]);
                         var _entIntro = new Intro.Entry(2, 0x0136, 0x0000, [0x011E, 0x0120], [0x011F, 0x0121]);
 
-                        Variables.CONFIG_MENU.Children.Insert(9, _entConfig);
                         Variables.INTRO_MENU.Children.Insert(2, _entIntro);
+                        Variables.CONFIG_MENU.Children.Insert(9, _entConfig);
                     }
 
                     if (Operations.GetFileSize("bgm/ps2md050.win32.scd") != 0x00)
@@ -184,21 +195,25 @@ namespace ReFined.KH2.Functions
                         var _entConfig = new Config.Entry(2, 0x0118, [0x0119, 0x011B], [0x011A, 0x011C]);
                         var _entIntro = new Intro.Entry(2, 0x0135, 0x0000, [0x0119, 0x011B], [0x011A, 0x011C]);
 
+                        Variables.INTRO_MENU.Children.Insert(4, _entIntro);
                         Variables.CONFIG_MENU.Children.Insert(9, _entConfig);
-                        Variables.INTRO_MENU.Children.Insert(2, _entIntro);
                     }
 
-                    if (_entAudioMain.Count > 0x01)
+                    if (_cfgAudioMain.Count > 0x01)
                     {
                         Terminal.Log("At least one Language Pack was located! Adding the options for it...", 0);
-                        Variables.CONFIG_MENU.Children.Insert(9, _entAudioMain);
+
+                        Variables.INTRO_MENU.Children.Insert(4, _intAudioMain);
+                        Variables.CONFIG_MENU.Children.Insert(9, _cfgAudioMain);
                     }
 
-                    if ((_entAudioSub.Count > 0x01 && Variables.LOADED_LANGS[0] == "JP") || 
-                        (_entAudioSub.Count > 0x02 && Variables.LOADED_LANGS[0] != "JP"))
+                    if ((_cfgAudioSub.Count > 0x01 && Variables.LOADED_LANGS[0] == "JP") || 
+                        (_cfgAudioSub.Count > 0x02 && Variables.LOADED_LANGS[0] != "JP"))
                     {
                         Terminal.Log("More than one European Language Pack located! Adjusting the options...", 0);
-                        Variables.AUDIO_SUB_CONFIG = _entAudioSub;
+
+                        Variables.AUDIO_SUB_INTRO = _intAudioSub;
+                        Variables.AUDIO_SUB_CONFIG = _cfgAudioSub;
                     }
 
                     var _entRoxas = new Intro.Entry(2, 0x0130, 0x0000, [0x0138, 0x0139], [0x0131, 0x0132]);

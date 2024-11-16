@@ -31,7 +31,9 @@ namespace ReFined.KH2.Functions
         public static bool AUDIO_SUB_ONLY;
 
         static Variables.CONFIG_BITWISE CONFIG_BIT;
-        static bool AUDIO_SUB_ACTIVE;
+        static bool SUB_INTRO_ACTIVE;
+        static bool SUB_CONFIG_ACTIVE;
+
         static bool CONFIG_TOGGLE;
         static bool CONFIG_WRITTEN;
 
@@ -272,6 +274,7 @@ namespace ReFined.KH2.Functions
                     CONFIG_WRITTEN = false;
                 }
 
+                var _audioMode = Variables.CONFIG_BITWISE.OFF;
                 var _musicMode = Variables.CONFIG_BITWISE.OFF;
                 var _enemyMode = Variables.CONFIG_BITWISE.OFF;
 
@@ -287,19 +290,41 @@ namespace ReFined.KH2.Functions
                 if (!Variables.IS_LITE)
                 {
                     var _addonOffset = 0;
+                    var _fetchIndex = AUDIO_SUB_ONLY ? Variables.CONFIG_BITWISE.AUDIO_JAPANESE : Variables.CONFIG_BITWISE.AUDIO_OTHER;
 
+                    var _audioActive = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x0134) == null ? false : true;
                     var _musicActive = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x0135) == null ? false : true;
                     var _enemyActive = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x0136) == null ? false : true;
 
+                    if (_audioActive)
+                    {
+                        _audioMode = _readState[0x04] == 0x01 ? Variables.CONFIG_BITWISE.AUDIO_JAPANESE :
+                                    (_readState[0x04] == 0x02 ? Variables.CONFIG_BITWISE.AUDIO_OTHER : Variables.CONFIG_BITWISE.OFF);
+
+                        if (_audioMode == _fetchIndex && !SUB_INTRO_ACTIVE)
+                        {
+                            Variables.INTRO_MENU.Children.Insert(5, Variables.AUDIO_SUB_INTRO);
+                            SUB_INTRO_ACTIVE = true;
+                        }
+
+                        else if (_audioMode != _fetchIndex && SUB_INTRO_ACTIVE)
+                        {
+                            Variables.INTRO_MENU.Children.Remove(Variables.AUDIO_SUB_INTRO);
+                            SUB_INTRO_ACTIVE = false;
+                        }
+
+                        _addonOffset = _addonOffset + (SUB_INTRO_ACTIVE ? 0x02 : 0x01);
+                    }
+
                     if (_musicActive)
                     {
-                        _musicMode = _readState[0x04] == 0x00 ? Variables.CONFIG_BITWISE.MUSIC_VANILLA : Variables.CONFIG_BITWISE.OFF;
+                        _musicMode = _readState[0x04 + _addonOffset] == 0x00 ? Variables.CONFIG_BITWISE.MUSIC_VANILLA : Variables.CONFIG_BITWISE.OFF;
                         _addonOffset++;
                     }
 
                     if (_enemyActive)
                     {
-                        _enemyMode = _readState[0x05] == 0x00 ? Variables.CONFIG_BITWISE.HEARTLESS_VANILLA: Variables.CONFIG_BITWISE.OFF;
+                        _enemyMode = _readState[0x04 + _addonOffset] == 0x00 ? Variables.CONFIG_BITWISE.HEARTLESS_VANILLA: Variables.CONFIG_BITWISE.OFF;
                         _addonOffset++;
                     }
 
@@ -319,6 +344,9 @@ namespace ReFined.KH2.Functions
 
                     Hypervisor.Write(Variables.ADDR_Config, CONFIG_BIT);
 
+                    Variables.AUDIO_MODE = CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.AUDIO_JAPANESE) ? 0x01 :
+                                          (CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.AUDIO_OTHER) ? 0x02 : 0x00); 
+                    
                     Variables.MUSIC_VANILLA = CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.MUSIC_VANILLA);
                     Variables.ENEMY_VANILLA = CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.HEARTLESS_VANILLA);
                     Variables.CONTROLLER_MODE = CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.PROMPT_CONTROLLER);
@@ -345,9 +373,9 @@ namespace ReFined.KH2.Functions
             var _musicActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x0118) == null ? false : true;
             var _enemyActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x011D) == null ? false : true;
 
-            var _offsetAudio = Convert.ToInt32(_audioActive) + Convert.ToInt32(AUDIO_SUB_ACTIVE);
-            var _offsetMusic = Convert.ToInt32(_audioActive) + Convert.ToInt32(_musicActive) + Convert.ToInt32(AUDIO_SUB_ACTIVE);
-            var _offsetEnemy = Convert.ToInt32(_audioActive) + Convert.ToInt32(_musicActive) + Convert.ToInt32(_enemyActive) + Convert.ToInt32(AUDIO_SUB_ACTIVE);
+            var _offsetAudio = Convert.ToInt32(_audioActive) + Convert.ToInt32(SUB_CONFIG_ACTIVE);
+            var _offsetMusic = Convert.ToInt32(_audioActive) + Convert.ToInt32(_musicActive) + Convert.ToInt32(SUB_CONFIG_ACTIVE);
+            var _offsetEnemy = Convert.ToInt32(_audioActive) + Convert.ToInt32(_musicActive) + Convert.ToInt32(_enemyActive) + Convert.ToInt32(SUB_CONFIG_ACTIVE);
 
             if (!Variables.IS_TITLE && !LOADED_SETTINGS)
             {
@@ -431,13 +459,13 @@ namespace ReFined.KH2.Functions
                                 {
                                     Variables.CONFIG_MENU.Children.Insert(0x0A, Variables.AUDIO_SUB_CONFIG);
                                     SETTINGS_READ.Insert(0x0A, Convert.ToByte(0x00));
-                                    AUDIO_SUB_ACTIVE = true;
+                                    SUB_CONFIG_ACTIVE = true;
                                 }
 
                                 else if (_audioToggle != _toggleSeek && _fetchConfig != null)
                                 {
                                     Variables.CONFIG_MENU.Children.Remove(Variables.AUDIO_SUB_CONFIG);
-                                    AUDIO_SUB_ACTIVE = false;
+                                    SUB_CONFIG_ACTIVE = false;
                                 }
                             }
                         }
@@ -509,8 +537,8 @@ namespace ReFined.KH2.Functions
 
                 var _toggleBit = AUDIO_SUB_ONLY ? Variables.CONFIG_BITWISE.AUDIO_JAPANESE : Variables.CONFIG_BITWISE.AUDIO_OTHER;
 
-                if ((Variables.AUDIO_SUB_CONFIG != null && _audioBit == _toggleBit && !AUDIO_SUB_ACTIVE) ||
-                    (Variables.AUDIO_SUB_CONFIG != null && _audioBit != _toggleBit && AUDIO_SUB_ACTIVE))
+                if ((Variables.AUDIO_SUB_CONFIG != null && _audioBit == _toggleBit && !SUB_CONFIG_ACTIVE) ||
+                    (Variables.AUDIO_SUB_CONFIG != null && _audioBit != _toggleBit && SUB_CONFIG_ACTIVE))
                     DEBOUNCE[6] = false;
             }
 
