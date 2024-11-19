@@ -1,7 +1,7 @@
 ﻿
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.Data.SqlTypes;
+
 using ReFined.Common;
 using ReFined.KH2.Information;
 using ReFined.Libraries;
@@ -73,8 +73,11 @@ namespace ReFined.KH2.Menus
             var _entAutosave = new Entry(3, 0x0104, [0x0105, 0x0107, 0x0109], [0x0106, 0x0108, 0x010A]);
             var _entController = new Entry(2, 0x0122, [0x0123, 0x0125], [0x0124, 0x0126]);
             var _entVibration = new Entry(2, 0xB71A, [0xB72A, 0xB752], [0xB72C, 0xB72D]);
-            var _entCommandKH2 = new Entry(2, 0xB71C, [0xB734, 0xB735], [0xB736, 0xB737]);
+            var _entCommandKH2 = new Entry(3, 0xB71C, [0xB734, 0xB735, 0x012C], [0xB736, 0xB737, 0x012D]);
             var _entDifficulty = new Entry(1, 0xB71D, [0xB738, 0xB739, 0xB73A, 0xCE30], [0xB73B, 0xB73C, 0xB73D, 0xCE31]);
+
+            if (Variables.IS_LITE)
+                 _entCommandKH2 = new Entry(2, 0xB71C, [0xB734, 0xB735], [0xB736, 0xB737]);
 
             Children = new ObservableCollection<Entry>()
             {

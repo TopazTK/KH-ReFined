@@ -2,9 +2,8 @@
 using ReFined.Libraries;
 using ReFined.KH2.InGame;
 using ReFined.KH2.Information;
+
 using BSharpConvention = Binarysharp.MSharp.Assembly.CallingConvention.CallingConventions;
-using System.Linq;
-using DiscordRPC;
 
 namespace ReFined.KH2.Functions
 {
@@ -16,6 +15,9 @@ namespace ReFined.KH2.Functions
 
         public static int SKIP_STAGE;
         public static bool SKIP_ROXAS;
+
+        public static ulong SORA_MSG_POINT;
+        public static bool SORA_TEXT_SWITCH = false;
 
         static byte CURR_SHORTCUT = 0x00;
         static bool SHORTCUT_TOGGLE = false;
@@ -51,7 +53,7 @@ namespace ReFined.KH2.Functions
                 {
                     Terminal.Log("Soft Reset Prompt enabled. Showing prompt.", 0);
 
-                    Message.ShowSmallObtained(0x0100);
+                    InGame.Message.ShowSmallObtained(0x0100);
                     var _cancelRequest = false;
 
                     Task.Factory.StartNew(() =>
@@ -66,7 +68,7 @@ namespace ReFined.KH2.Functions
                             if ((_buttonSecond & _buttonSeek) == _buttonSeek)
                             {
                                 Terminal.Log("Soft Reset interrupted.", 0);
-                                Message.ShowSmallObtained(0x0101);
+                                InGame.Message.ShowSmallObtained(0x0101);
                                 _cancelRequest = true;
                                 DEBOUNCE[0] = false;
                                 break;
@@ -123,13 +125,21 @@ namespace ReFined.KH2.Functions
         public static void TriggerPrologueSkip()
         {
             var _diffRead = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x2498);
-            var _selectButton = Hypervisor.Read<byte>(0xB1D5E4);
+            var _selectButton = Hypervisor.Read<byte>(Variables.ADDR_TitleSelect);
 
-            if (Variables.IS_TITLE && SKIP_STAGE != 0)
+            if (Variables.IS_TITLE)
             {
-                Terminal.Log("Title Screen detected! Resetting Roxas Skip!", 0);
-                SKIP_STAGE = 0;
-                SKIP_ROXAS = false;
+                if (_selectButton == 0x01 && SKIP_STAGE == 0)
+                {
+                    Terminal.Log("Loaded game detected! Disabling Roxas Skip...", 0);
+                    SKIP_STAGE = 3;
+                }
+
+                else if (_selectButton == 0x00 && SKIP_STAGE > 0x00)
+                {
+                    Terminal.Log("Loaded game abandoned. Re-enabling Roxas Skip!", 0);
+                    SKIP_STAGE = 0;
+                }
             }
 
             if (!Variables.IS_TITLE)
@@ -139,12 +149,6 @@ namespace ReFined.KH2.Functions
                 var _eventCheck = Hypervisor.Read<byte>(Variables.ADDR_Area + 0x04);
 
                 var _cutsceneCheck = Hypervisor.Read<byte>(Variables.ADDR_CutsceneFlag);
-
-                if (_selectButton == 0x00 && SKIP_STAGE == 3)
-                {
-                    Terminal.Log("Loaded game abandoned. Re-enabling Roxas Skip!", 0);
-                    SKIP_STAGE = 0;
-                }
 
                 if (_worldCheck == 0x02 && _roomCheck == 0x01 && _eventCheck == 0x38 && SKIP_STAGE == 0)
                 {
@@ -640,12 +644,6 @@ namespace ReFined.KH2.Functions
                     Terminal.Log("Roxas Skip has been completed!", 0);
                     SKIP_STAGE = 2;
                 }
-
-                else if (_selectButton == 0x01 && SKIP_STAGE == 0)
-                {
-                    Terminal.Log("Loaded game detected! Disabling Roxas Skip...", 0);
-                    SKIP_STAGE = 3;
-                }
             }
         }
 
@@ -664,7 +662,8 @@ namespace ReFined.KH2.Functions
             var _shortReal = Variables.ADDR_SaveData + 0x36F8;
             var _shortFake = Variables.ADDR_SaveData + 0xE100;
 
-            var _fetchPoint = Operations.FetchPointerMSG(Variables.PINT_SystemMSG, 0x051F);
+            if (SORA_MSG_POINT == 0x00)
+                SORA_MSG_POINT = Operations.FetchPointerMSG(Variables.PINT_SystemMSG, 0x051F);
 
             var _isInMainShortcut = _isPaused == 0x01 && _subMenuType == 0x19;
             var _isEditingShortcut = _isPaused == 0x01 && (_subMenuType == 0x1A || _subMenuType == 0x1D || _subMenuType == 0x1E || _subMenuType == 0x1F);
@@ -673,12 +672,12 @@ namespace ReFined.KH2.Functions
             if (MAIN_TEXT == null)
                 MAIN_TEXT = Operations.FetchStringMSG(Variables.PINT_SystemMSG, 0x051F);
 
-            if (!Variables.IS_TITLE)
+            if (!Variables.IS_TITLE && !Variables.IS_LITE)
             {
                 if (_isEditingShortcut && !SHORTCUT_TOGGLE)
                     SHORTCUT_TOGGLE = true;
 
-                else if ((!_isEditingShortcut && SHORTCUT_TOGGLE) || Hypervisor.Read<short>(_shortFake) == 0x0000)
+                else if ((!_isEditingShortcut && SHORTCUT_TOGGLE) || (Hypervisor.Read<short>(_shortFake) == 0x0000 && Hypervisor.Read<short>(_shortReal) != 0x0000))
                 {
                     Terminal.Log("Submitting Shortcut Menu " + Char.ConvertFromUtf32(0x41 + CURR_SHORTCUT) + "!", 0x00);
                     var _shortTake = Hypervisor.Read<byte>(_shortReal, 0x08);
@@ -686,13 +685,17 @@ namespace ReFined.KH2.Functions
                     SHORTCUT_TOGGLE = false;
                 }
 
-                if (!_isInShortcut)
-                    Hypervisor.Write(_fetchPoint, "Sora".ToKHSCII(), true);
+                if (!_isInShortcut && !SORA_TEXT_SWITCH)
+                {
+                    Hypervisor.Write(SORA_MSG_POINT, "Sora".ToKHSCII(), true);
+                    SORA_TEXT_SWITCH = true;
+                }
 
-                else
+                else if (_isInShortcut)
                 {
                     MAIN_TEXT[MAIN_TEXT.Length - 0x02] = (byte)(0x2E + CURR_SHORTCUT);
-                    Hypervisor.Write(_fetchPoint, MAIN_TEXT, true);
+                    Hypervisor.Write(SORA_MSG_POINT, MAIN_TEXT, true);
+                    SORA_TEXT_SWITCH = false;
                 }
 
                 if (_menuType != 0x05 || ((_inputRead & 0x40) == 0x00 && (_inputRead & 0x10) == 0x00))
@@ -759,6 +762,12 @@ namespace ReFined.KH2.Functions
                         Variables.SharpHook[OffsetShortcutUpdate].Execute();
                 }
             }
+        
+            else if (!Variables.IS_TITLE && Variables.IS_LITE && !SORA_TEXT_SWITCH)
+            {
+                Hypervisor.Write(SORA_MSG_POINT, "Sora".ToKHSCII(), true);
+                SORA_TEXT_SWITCH = true;
+            }
         }
     
         public static void TriggerUpdate()
@@ -813,7 +822,7 @@ namespace ReFined.KH2.Functions
 
                         if (UPDATE_PHASE == 0x00)
                         {
-                            var _result = Message.ShowDialogCamp(0x0128, Variables.DIALOG_TYPE.YES_NO_BUTTON);
+                            var _result = InGame.Message.ShowDialogCamp(0x0128, Variables.DIALOG_TYPE.YES_NO_BUTTON);
 
                             if (_result)
                                 UPDATE_PHASE = 0x01;
@@ -829,7 +838,7 @@ namespace ReFined.KH2.Functions
                         {
                             
 
-                            Variables.SharpHook[Message.OffsetSetCampWarning].ExecuteJMP(BSharpConvention.MicrosoftX64, 0x0129, 0x0000);
+                            Variables.SharpHook[InGame.Message.OffsetSetCampWarning].ExecuteJMP(BSharpConvention.MicrosoftX64, 0x0129, 0x0000);
 
                             for (int i = 0; i < 100; i++)
                             {
@@ -841,9 +850,9 @@ namespace ReFined.KH2.Functions
 
                             Hypervisor.Write(_updateTextAbsolute, UPDATE_DONE_TEXT, true);
 
-                            Variables.SharpHook[Message.OffsetShowCampWarning].Execute();
-                            Variables.SharpHook[Message.OffsetMenu].Execute(BSharpConvention.MicrosoftX64, 0x04, 0x00);
-                            Variables.SharpHook[Message.OffsetMenu + 0x40].Execute();
+                            Variables.SharpHook[InGame.Message.OffsetShowCampWarning].Execute();
+                            Variables.SharpHook[InGame.Message.OffsetMenu].Execute(BSharpConvention.MicrosoftX64, 0x04, 0x00);
+                            Variables.SharpHook[InGame.Message.OffsetMenu + 0x40].Execute();
 
                             UPDATE_PHASE = 0x02;
                         }

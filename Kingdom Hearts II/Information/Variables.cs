@@ -53,6 +53,7 @@ namespace ReFined.KH2.Information
         public static bool IS_TITLE =>
             Hypervisor.Read<uint>(ADDR_Area) == 0x00FFFFFF
          || Hypervisor.Read<uint>(ADDR_Area) == 0x00000101
+         || Hypervisor.Read<uint>(ADDR_Title) == 0x00000001
          || Hypervisor.Read<uint>(ADDR_Reset) == 0x00000001;
 
         public static bool IS_LOADED =>
@@ -179,12 +180,19 @@ namespace ReFined.KH2.Information
         public static ulong ADDR_BTLFormatter = 0x05C5E48;
         public static ulong ADDR_ObjentryBASE = 0x2A254D0;
         public static ulong ADDR_LimitShortcut = 0x05C9678;
-        #endif
+        public static ulong ADDR_CommandMenu = 0x5B16A8;
+        public static ulong ADDR_CommandFlag = 0x71740C;
+        public static ulong ADDR_Viewspace2D = 0x8A09B8;
+        public static ulong ADDR_Viewspace3D = 0x8A0990;
+        public static ulong ADDR_RenderResolution = 0x8A0980;
+        public static ulong ADDR_TitleSelect = 0xB1D5E4;
+        public static ulong ADDR_PlayerHP = 0x2A23598;
+#endif
 
-        #if EPIC_RELEASE
+#if EPIC_RELEASE
         public static ulong ADDR_FadeValue = 0xABAE47;
         public static ulong ADDR_Reset = 0xABA6DA;
-        public static ulong ADDR_Input = 0x29FAD70;
+        public static ulong ADDR_Input = 0x29FAE40;
         public static ulong ADDR_Confirm = 0x714E02; 
         public static ulong ADDR_Area = 0x716DF8;
         public static ulong ADDR_Title = 0x7167A4;
@@ -197,9 +205,9 @@ namespace ReFined.KH2.Information
         public static ulong ADDR_CutsceneFlag = 0x7281C0;
         public static ulong ADDR_Config = 0x9AD4D4;
         public static ulong ADDR_SaveData = 0x9A9330;
-        public static ulong ADDR_Framerate = 0x714DEE;
+        public static ulong ADDR_Framerate = 0x8CBD0A;
         public static ulong ADDR_Framelimiter = 0xABA688;
-        public static ulong ADDR_ControllerMode = 0x02B44A8;
+        public static ulong ADDR_ControllerMode = 0x2B448C8;
         public static ulong ADDR_ActionExe = 0x2A5C416;
         public static ulong ADDR_ReactionID = 0x2A10BE2;
         public static ulong ADDR_MenuType = 0x9001C4;
@@ -218,8 +226,14 @@ namespace ReFined.KH2.Information
         public static ulong ADDR_BTLFormatter = 0x5C5FB8;
         public static ulong ADDR_ObjentryBASE = 0x2A24F50;
         public static ulong ADDR_LimitShortcut = 0x5C97E8;
-        public static ulong ADDR_MenuFlag = 0x717418;
-        #endif
+        public static ulong ADDR_MenuFlag = 0x717208;
+        public static ulong ADDR_CommandMenu = 0x5B1868;
+        public static ulong ADDR_CommandFlag = 0x7171FC;
+        public static ulong ADDR_Viewspace2D = 0x8A0BE8;
+        public static ulong ADDR_Viewspace3D = 0x8A0BC0;
+        public static ulong ADDR_RenderResolution = 0x8A0BB0;
+        public static ulong ADDR_TitleSelect = 0xB1D064;
+#endif
 
         //
         // POINTERS
@@ -227,19 +241,27 @@ namespace ReFined.KH2.Information
         // Addresses for the pointers we need.
         //
 
+#if STEAM_RELEASE
         public static ulong PINT_SystemMSG = 0x2A11678;
-
         public static ulong PINT_ConfigMenu = 0xBF0150;
         public static ulong PINT_SubMenuOptionSelect = 0xBEECD8;
-
         public static ulong PINT_SaveInformation = 0x79CB10;
-
         public static ulong PINT_GameOver = 0xBEF4A8;
         public static ulong PINT_GameOverOptions = 0x2A11360;
-
         public static ulong PINT_ChildMenu = 0x2A11118;
         public static ulong PINT_EnemyInfo = 0x2A0CD70;
+#endif
 
+#if EPIC_RELEASE
+        public static ulong PINT_SystemMSG = 0x2A110F8;
+        public static ulong PINT_ConfigMenu = 0xBEFBD0;
+        public static ulong PINT_SubMenuOptionSelect = 0xBEE758;
+        public static ulong PINT_SaveInformation = 0x2B0C240;
+        public static ulong PINT_GameOver = 0xBEEF28;
+        public static ulong PINT_GameOverOptions = 0x2A10DE0;
+        public static ulong PINT_ChildMenu = 0x2A10B98;
+        public static ulong PINT_EnemyInfo = 0x2A0C7F0;
+#endif
         //
         // ASSET LIBRARY
         //
@@ -284,6 +306,7 @@ namespace ReFined.KH2.Information
         public static string FUNC_ConfigUpdate = "40 53 55 56 57 41 54 41 55 41 56 41 57 48 83 EC 58 E8 ?? ?? ?? ?? 48 8B 0D ?? ?? ?? ?? 4C 8B F8 E8 ?? ?? ?? ??";
         public static string FUNC_SelectUpdate = "48 83 EC 28 48 8B 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 63 D0 48 8B 05 ?? ?? ?? ?? 48 0F BE 0C 02";
         public static string FUNC_FadeCampWarning = "48 83 EC 28 85 C9 BA 0B 00 00 00 48 8B 0D ?? ?? ?? ?? B8 08 00 00 00 0F 44 D0 E8 ?? ?? ?? ?? 48 8B 0D ?? ?? ?? ??";
+        public static string FUNC_ResetCommandMenu = "40 56 48 83 EC 30 8B 35 ?? ?? ?? ?? E8 ?? ?? ?? ?? 84 C0 0F 85 ?? ?? ?? ?? E8 ?? ?? ?? ?? 84 C0";
 
         //
         // HOTFIX SIGNATURES
@@ -301,6 +324,7 @@ namespace ReFined.KH2.Information
         public static string HFIX_ShortcutEquipFilter = "48 83 EC 28 E8 ?? ?? ?? ?? 0F B6 48 02 84 C9 74 19";
         public static string HFIX_ShortcutCategoryFilter = "48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 57 41 54 41 55 41 56 41 57 48 81 EC 90 01 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 80 01 00 00 33 F6 89 4C 24 28 85 C9 48 8D 05 ?? ?? ?? ??";
         public static string HFIX_FormInventory = "48 89 5C 24 18 57 48 83 EC 20 33 DB 48 89 6C 24 30 41 8B F8 48 8B E9";
+        public static string HFIX_VoiceLineCheck = "40 55 56 57 41 54 41 55 41 56 41 57 48 8D 6C 24 E0 48 81 EC 20 01 00 00 48 C7 44 24 60 FE FF FF FF 48 89 9C 24 60 01 00 00 48 8B 05 ?? ?? ?? ??";
 
         public static string HFIX_ConfigFirst = "40 53 48 83 EC 20 0F B6 D9 48 8B 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 4C 8B 1D ?? ?? ?? ??";
         public static string HFIX_ConfigSecond = "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 41 54 41 55 41 56 41 57 48 81 EC 80 00 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 70 E8 ?? ?? ?? ?? 48 8B 0D ?? ?? ?? ??";
@@ -367,8 +391,8 @@ namespace ReFined.KH2.Information
             CAMERA_V = 0x0100,
             SUMMON_PARTIAL = 0x0200,
             SUMMON_FULL = 0x0400,
-            AUDIO_JAPANESE = 0x0800,
-            AUDIO_OTHER = 0x1000,
+            AUDIO_PRIMARY = 0x0800,
+            AUDIO_SECONDARY = 0x1000,
             PROMPT_CONTROLLER = 0x2000,
             MUSIC_VANILLA = 0x4000,
             HEARTLESS_VANILLA = 0x8000

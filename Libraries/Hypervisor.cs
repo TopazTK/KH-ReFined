@@ -1,8 +1,8 @@
-﻿using System.Diagnostics;
+﻿using System.Text;
+using System.Diagnostics;
 using System.Globalization;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace ReFined.Libraries
 {
@@ -121,42 +121,15 @@ namespace ReFined.Libraries
             if (_outType.IsEnum)
             {
                 var _enumType = Enum.GetUnderlyingType(_outType);
-                var _retArray = Array.CreateInstance(_enumType, Size);
+                var _retArray = MemoryMarshal.Cast<byte, T>(_outArray);
 
-                for (int i = 0; i < Size; i++)
-                {
-                    var _pickArray = _outArray.Skip(i * _outSize).Take(_outSize).ToArray();
-
-                    var _gcHandle = GCHandle.Alloc(_pickArray, GCHandleType.Pinned);
-                    var _convData = (T)Marshal.PtrToStructure(_gcHandle.AddrOfPinnedObject(), _enumType);
-
-                    _retArray.SetValue(_convData, i);
-                    _gcHandle.Free();
-                }
-
-                var _convArray = new T[Size];
-                _retArray.CopyTo(_convArray, 0);
-
-                return _convArray;
+                return _retArray.ToArray();
             }
 
             else
             {
-                var _retArray = new T[Size];
-
-                for (int i = 0; i < Size; i++)
-                {
-                    var _pickArray = _outArray.Skip(i * _outSize).Take(_outSize).ToArray();
-
-                    var _gcHandle = GCHandle.Alloc(_pickArray, GCHandleType.Pinned);
-                    var _convData = (T)Marshal.PtrToStructure(_gcHandle.AddrOfPinnedObject(), typeof(T));
-
-                    _retArray[i] = _convData;
-                    _gcHandle.Free();
-                }
-
-                return _retArray;
-
+                var _retArray = MemoryMarshal.Cast<byte, T>(_outArray);
+                return _retArray.ToArray();
             }
         }
 
@@ -183,10 +156,15 @@ namespace ReFined.Libraries
 
             var _inSize = (int)_dynoMethod.Invoke(null, null);
             int _inWrite = 0;
+            var _inType = typeof(T);
 
             if (_inSize > 1)
             {
-                var _inArray = (byte[])typeof(BitConverter).GetMethod("GetBytes", new[] { typeof(T) }).Invoke(null, new object[] { Value });
+                if (_inType.IsEnum)
+                    _inType = Enum.GetUnderlyingType(_inType);
+            
+
+                var _inArray = (byte[])typeof(BitConverter).GetMethod("GetBytes", new[] { _inType }).Invoke(null, new object[] { Value });
                 WriteProcessMemory(Handle, _address, _inArray, _inArray.Length, ref _inWrite);
             }
 
@@ -221,17 +199,8 @@ namespace ReFined.Libraries
             var _inSize = (int)_dynoMethod.Invoke(null, null);
             int _inWrite = 0;
 
-            if (_inSize > 1)
-            {
-                for (int i = 0; i < Value.Length; i++)
-                {
-                    var _inArray = (byte[])typeof(BitConverter).GetMethod("GetBytes", [typeof(T)]).Invoke(null, [Value[i]]);
-                    WriteProcessMemory(Handle, _address + _inSize * i, _inArray, _inArray.Length, ref _inWrite);
-                }
-            }
-
-            else
-                WriteProcessMemory(Handle, _address, Value as byte[], Value.Length, ref _inWrite);
+            var _writeArray = MemoryMarshal.Cast<T, byte>(Value).ToArray();
+            WriteProcessMemory(Handle, _address, _writeArray, _writeArray.Length, ref _inWrite);
         }
 
         /// <summary>
@@ -275,7 +244,7 @@ namespace ReFined.Libraries
 
             int _inWrite = 0;
 
-            var _stringArray = Encoding.GetEncoding(437).GetBytes(Value);
+            var _stringArray = Encoding.Default.GetBytes(Value);
 
             if (Unicode)
                 _stringArray = Encoding.Unicode.GetBytes(Value);
@@ -381,7 +350,7 @@ namespace ReFined.Libraries
         /// <exception cref="InvalidDataException">The pattern hit more or less than 1 result.</exception>
         public static IntPtr FindSignature(string Input)
         {
-            if (_patternBuffer == null)
+            if (_patternBuffer == null) 
                 _patternBuffer = Read<byte>(0x00, Process.MainModule.ModuleMemorySize);
 
             var _sigBytes = Input.Split(' ');
@@ -412,7 +381,7 @@ namespace ReFined.Libraries
             }
 
             if (results.Count != 1)
-                throw new InvalidDataException("ERROR: Signature scan error -- Either none or more than one found!");
+                throw new InvalidDataException("Signature scan failed! " + results.Count + " result(s) found!");
 
             return results[0];
         }

@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using ReFined.KH2.Information;
+using ReFined.Libraries;
 
 namespace ReFined.Common
 {
@@ -33,6 +30,13 @@ namespace ReFined.Common
                 };
 
                 File.WriteAllLines("reFined.cfg", _outDefault);
+            }
+
+            else
+            {
+                var _confIni = new INI("reFined.cfg");
+                if (_confIni.KeyExists("debugMode", "General"))
+                    Variables.DEV_MODE = Convert.ToBoolean(_confIni.Read("debugMode", "General"));
             }
         }
     }

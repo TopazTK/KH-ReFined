@@ -1,4 +1,6 @@
-﻿using ReFined.Common;
+﻿#define STEAM_RELEASE
+
+using ReFined.Common;
 using ReFined.Libraries;
 using ReFined.KH2.Information;
 using ReFined.KH2.Menus;
@@ -261,6 +263,7 @@ namespace ReFined.KH2.Functions
 
         public static void HandleIntro()
         {
+            var _subAudio = 0x00;
             var _selectButton = Hypervisor.Read<byte>(0xB1D5E4);
 
             CONFIG_TOGGLE = _selectButton == 0x00 ? true : false;
@@ -290,7 +293,7 @@ namespace ReFined.KH2.Functions
                 if (!Variables.IS_LITE)
                 {
                     var _addonOffset = 0;
-                    var _fetchIndex = AUDIO_SUB_ONLY ? Variables.CONFIG_BITWISE.AUDIO_JAPANESE : Variables.CONFIG_BITWISE.AUDIO_OTHER;
+                    var _fetchIndex = AUDIO_SUB_ONLY ? Variables.CONFIG_BITWISE.AUDIO_PRIMARY : Variables.CONFIG_BITWISE.AUDIO_SECONDARY;
 
                     var _audioActive = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x0134) == null ? false : true;
                     var _musicActive = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x0135) == null ? false : true;
@@ -298,23 +301,29 @@ namespace ReFined.KH2.Functions
 
                     if (_audioActive)
                     {
-                        _audioMode = _readState[0x04] == 0x01 ? Variables.CONFIG_BITWISE.AUDIO_JAPANESE :
-                                    (_readState[0x04] == 0x02 ? Variables.CONFIG_BITWISE.AUDIO_OTHER : Variables.CONFIG_BITWISE.OFF);
+                        _audioMode = _readState[0x04] == 0x01 ? Variables.CONFIG_BITWISE.AUDIO_PRIMARY :
+                                    (_readState[0x04] == 0x02 ? Variables.CONFIG_BITWISE.AUDIO_SECONDARY : Variables.CONFIG_BITWISE.OFF);
 
-                        if (_audioMode == _fetchIndex && !SUB_INTRO_ACTIVE)
+                        if (Variables.AUDIO_SUB_INTRO != null)
                         {
-                            Variables.INTRO_MENU.Children.Insert(5, Variables.AUDIO_SUB_INTRO);
-                            SUB_INTRO_ACTIVE = true;
-                        }
+                            if (_audioMode == _fetchIndex && !SUB_INTRO_ACTIVE)
+                            {
+                                Variables.INTRO_MENU.Children.Insert(5, Variables.AUDIO_SUB_INTRO);
+                                SUB_INTRO_ACTIVE = true;
+                            }
 
-                        else if (_audioMode != _fetchIndex && SUB_INTRO_ACTIVE)
-                        {
-                            Variables.INTRO_MENU.Children.Remove(Variables.AUDIO_SUB_INTRO);
-                            SUB_INTRO_ACTIVE = false;
+                            else if (_audioMode != _fetchIndex && SUB_INTRO_ACTIVE)
+                            {
+                                Variables.INTRO_MENU.Children.Remove(Variables.AUDIO_SUB_INTRO);
+                                SUB_INTRO_ACTIVE = false;
+                            }
                         }
 
                         _addonOffset = _addonOffset + (SUB_INTRO_ACTIVE ? 0x02 : 0x01);
                     }
+
+                    if (SUB_INTRO_ACTIVE)
+                        _subAudio = _readState[0x05];
 
                     if (_musicActive)
                     {
@@ -331,7 +340,7 @@ namespace ReFined.KH2.Functions
                     Demand.SKIP_ROXAS = _readState[0x04 + _addonOffset] == 0x01 ? true : false;
                 }
 
-                CONFIG_BIT = Variables.CONFIG_BITWISE.SUMMON_FULL | Variables.CONFIG_BITWISE.NAVI_MAP | _vibration | _autoSave | _controlPrompt | _musicMode | _enemyMode;
+                CONFIG_BIT = Variables.CONFIG_BITWISE.SUMMON_FULL | Variables.CONFIG_BITWISE.NAVI_MAP | _vibration | _autoSave | _controlPrompt | _audioMode | _musicMode | _enemyMode;
             }
 
             if (!Variables.IS_TITLE && !CONFIG_WRITTEN && CONFIG_TOGGLE)
@@ -344,8 +353,11 @@ namespace ReFined.KH2.Functions
 
                     Hypervisor.Write(Variables.ADDR_Config, CONFIG_BIT);
 
-                    Variables.AUDIO_MODE = CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.AUDIO_JAPANESE) ? 0x01 :
-                                          (CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.AUDIO_OTHER) ? 0x02 : 0x00); 
+                    if (SUB_INTRO_ACTIVE)
+                    Hypervisor.Write(Variables.ADDR_Config + 0x04, _subAudio);
+
+                    Variables.AUDIO_MODE = CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.AUDIO_PRIMARY) ? 0x01 :
+                                          (CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.AUDIO_SECONDARY) ? 0x02 : 0x00); 
                     
                     Variables.MUSIC_VANILLA = CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.MUSIC_VANILLA);
                     Variables.ENEMY_VANILLA = CONFIG_BIT.HasFlag(Variables.CONFIG_BITWISE.HEARTLESS_VANILLA);
@@ -359,6 +371,7 @@ namespace ReFined.KH2.Functions
 
         public static void HandleConfig()
         {
+            var _configSecond = Hypervisor.Read<byte>(Variables.ADDR_Config + 0x02);
             var _configBitwise = Hypervisor.Read<Variables.CONFIG_BITWISE>(Variables.ADDR_Config);
 
             var _selectPoint = Hypervisor.Read<ulong>(Variables.PINT_SubMenuOptionSelect);
@@ -385,7 +398,7 @@ namespace ReFined.KH2.Functions
                 {
                     Variables.MUSIC_VANILLA = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.MUSIC_VANILLA);
                     Variables.ENEMY_VANILLA = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.HEARTLESS_VANILLA);
-                    Variables.AUDIO_MODE = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUDIO_JAPANESE) ? 0x01 : (_configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUDIO_OTHER) ? 0x02 : 0x00);
+                    Variables.AUDIO_MODE = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUDIO_PRIMARY) ? 0x01 : (_configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUDIO_SECONDARY) ? 0x02 : 0x00);
                 }
 
                 Variables.CONTROLLER_MODE = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.PROMPT_CONTROLLER);
@@ -405,6 +418,8 @@ namespace ReFined.KH2.Functions
                 {
                     Terminal.Log("Config Menu has been opened! Setting up necessary stuff.", 0);
 
+                    var _vladBit = Hypervisor.Read<byte>(Variables.ADDR_Config + 0x03);
+
                     var _naviMap = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.NAVI_MAP) ? 0x00 : 0x01;
                     var _rightStick = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.RIGHT_STICK) ? 0x01 : 0x00;
                     var _cameraAuto = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.FIELD_CAM) ? 0x01 : 0x00;
@@ -416,6 +431,9 @@ namespace ReFined.KH2.Functions
 
                     var _autoSave = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUTOSAVE_INDICATOR) ? 0x00 : (_configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUTOSAVE_SILENT) ? 0x01 : 0x02);
                     var _promptMode = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.PROMPT_CONTROLLER) ? 0x00 : 0x01;
+
+                    if (_vladBit == 0x01)
+                        _commandKH2 = 0x02;
 
                     SETTINGS_READ = new List<byte>
                     {
@@ -434,8 +452,8 @@ namespace ReFined.KH2.Functions
 
                     if (!Variables.IS_LITE)
                     {
-                        var _audioToggle = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUDIO_JAPANESE) ? 0x01 :
-                                          (_configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUDIO_OTHER) ? 0x02 : 0x00);
+                        var _audioToggle = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUDIO_PRIMARY) ? 0x01 :
+                                          (_configBitwise.HasFlag(Variables.CONFIG_BITWISE.AUDIO_SECONDARY) ? 0x02 : 0x00);
                         
                         var _musicClassic = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.MUSIC_VANILLA) ? 0x00 : 0x01;
                         var _heartlessClassic = _configBitwise.HasFlag(Variables.CONFIG_BITWISE.HEARTLESS_VANILLA) ? 0x00 : 0x01;
@@ -458,7 +476,7 @@ namespace ReFined.KH2.Functions
                                 if (_audioToggle == _toggleSeek && _fetchConfig == null)
                                 {
                                     Variables.CONFIG_MENU.Children.Insert(0x0A, Variables.AUDIO_SUB_CONFIG);
-                                    SETTINGS_READ.Insert(0x0A, Convert.ToByte(0x00));
+                                    SETTINGS_READ.Insert(0x0A, _configSecond);
                                     SUB_CONFIG_ACTIVE = true;
                                 }
 
@@ -505,11 +523,20 @@ namespace ReFined.KH2.Functions
 
                 var _commandBit = SETTINGS_WRITE[0x09 + _offsetEnemy] == 0x01 ? Variables.CONFIG_BITWISE.COMMAND_KH2 : Variables.CONFIG_BITWISE.OFF;
 
+                if (SETTINGS_WRITE[0x09 + _offsetEnemy] == 0x02)
+                {
+                    _commandBit = Variables.CONFIG_BITWISE.COMMAND_KH2;
+                    Hypervisor.Write(Variables.ADDR_Config + 0x03, 0x01);
+                }
+
+                else
+                    Hypervisor.Write(Variables.ADDR_Config + 0x03, 0x00);
+
                 Variables.SAVE_MODE = SETTINGS_WRITE[0x06];
                 Variables.CONTROLLER_MODE = SETTINGS_WRITE[0x07] == 0x00 ? true : false;
 
-                var _audioBit = SETTINGS_WRITE[0x09] == 0x01 ? Variables.CONFIG_BITWISE.AUDIO_JAPANESE : 
-                               (SETTINGS_WRITE[0x09] == 0x02 ? Variables.CONFIG_BITWISE.AUDIO_OTHER : Variables.CONFIG_BITWISE.OFF);
+                var _audioBit = SETTINGS_WRITE[0x09] == 0x01 ? Variables.CONFIG_BITWISE.AUDIO_PRIMARY : 
+                               (SETTINGS_WRITE[0x09] == 0x02 ? Variables.CONFIG_BITWISE.AUDIO_SECONDARY : Variables.CONFIG_BITWISE.OFF);
 
                 var _musicBit = SETTINGS_WRITE[0x09 + _offsetAudio] == 0x00 ? Variables.CONFIG_BITWISE.MUSIC_VANILLA : Variables.CONFIG_BITWISE.OFF;
                 var _enemyBit = SETTINGS_WRITE[0x09 + _offsetMusic] == 0x00 ? Variables.CONFIG_BITWISE.HEARTLESS_VANILLA : Variables.CONFIG_BITWISE.OFF;
@@ -535,7 +562,10 @@ namespace ReFined.KH2.Functions
 
                 Hypervisor.Write(Variables.ADDR_Config, _writeBitwise);
 
-                var _toggleBit = AUDIO_SUB_ONLY ? Variables.CONFIG_BITWISE.AUDIO_JAPANESE : Variables.CONFIG_BITWISE.AUDIO_OTHER;
+                if (SUB_CONFIG_ACTIVE)
+                    Hypervisor.Write(Variables.ADDR_Config + 0x02, SETTINGS_WRITE[0x0A]);
+                    
+                var _toggleBit = AUDIO_SUB_ONLY ? Variables.CONFIG_BITWISE.AUDIO_PRIMARY : Variables.CONFIG_BITWISE.AUDIO_SECONDARY;
 
                 if ((Variables.AUDIO_SUB_CONFIG != null && _audioBit == _toggleBit && !SUB_CONFIG_ACTIVE) ||
                     (Variables.AUDIO_SUB_CONFIG != null && _audioBit != _toggleBit && SUB_CONFIG_ACTIVE))
@@ -626,23 +656,19 @@ namespace ReFined.KH2.Functions
 
         public static void HandleRatio()
         {
-            ulong _2ldAddr = 0x8A0974;
-            ulong _renderAddr = 0x8A098C;
-            ulong _viewportAddr = 0x8A099C;
-
-            var _renderWidth = Hypervisor.Read<float>(_renderAddr);
-            var _renderHeight = Hypervisor.Read<float>(_renderAddr + 0x04);
+            var _renderWidth = Hypervisor.Read<float>(Variables.ADDR_RenderResolution);
+            var _renderHeight = Hypervisor.Read<float>(Variables.ADDR_RenderResolution + 0x04);
 
             if (_renderWidth != 0x00 && _renderHeight != 0x00)
             {
                 var _fetchRatio = (float)Math.Round(_renderWidth / _renderHeight, 2);
 
-                Hypervisor.Write(_viewportAddr, _fetchRatio);
+                Hypervisor.Write(Variables.ADDR_Viewspace3D, _fetchRatio);
 
                 if (_fetchRatio == 1.6F)
-                    Hypervisor.Write(_viewportAddr + 4, 2F);
+                    Hypervisor.Write(Variables.ADDR_Viewspace3D + 0x04, 1.15F);
 
-                Hypervisor.Write(_2ldAddr, 640F / _fetchRatio);
+                Hypervisor.Write(Variables.ADDR_Viewspace2D, 640F / _fetchRatio);
 
                 POSITIVE_OFFSET = 0x0055;
                 NEGATIVE_OFFSET = -0x0055;
@@ -662,53 +688,55 @@ namespace ReFined.KH2.Functions
                         break;
                 }
 
-                Hypervisor.Write(0x18B906 + 0x2400, NEGATIVE_OFFSET); // Information Bar
-                Hypervisor.Write(0x18B93A + 0x2400, NEGATIVE_OFFSET); // Information Bar
+                #if STEAM_RELEASE
+                Hypervisor.Write(0x15E55C, NEGATIVE_OFFSET);
 
-                Hypervisor.Write(0x15C15C + 0x2400, NEGATIVE_OFFSET); // Command Menu
+                Hypervisor.Write(0x17A586, POSITIVE_OFFSET);
+                Hypervisor.Write(0x17A5C0, POSITIVE_OFFSET);
 
-                Hypervisor.Write(0x17F989 + 0x2400, POSITIVE_OFFSET); // Party HUD
+                Hypervisor.Write(0x17F2BB, POSITIVE_OFFSET);
+                Hypervisor.Write(0x17F313, POSITIVE_OFFSET);
+                Hypervisor.Write(0x17F35A, POSITIVE_OFFSET);
+                Hypervisor.Write(0x17F37F, POSITIVE_OFFSET);
+                Hypervisor.Write(0x17F399, POSITIVE_OFFSET);
+                Hypervisor.Write(0x17F3C9, POSITIVE_OFFSET);
+                Hypervisor.Write(0x17F3F9, POSITIVE_OFFSET);
+                Hypervisor.Write(0x17F429, POSITIVE_OFFSET);
+                Hypervisor.Write(0x17F5E5, POSITIVE_OFFSET);
+                Hypervisor.Write(0x17F619, POSITIVE_OFFSET);
 
-                Hypervisor.Write(0x178186 + 0x2400, POSITIVE_OFFSET); // Radar Cursor
-                Hypervisor.Write(0x1781C0 + 0x2400, POSITIVE_OFFSET); // Radar Map
+                Hypervisor.Write(0x180BBF, POSITIVE_OFFSET);
+                Hypervisor.Write(0x1819A9, POSITIVE_OFFSET);
+                Hypervisor.Write(0x18157D, POSITIVE_OFFSET);
+                Hypervisor.Write(0x1809F8, POSITIVE_OFFSET);
 
-                Hypervisor.Write(0x180A4C + 0x2400, POSITIVE_OFFSET); // Enemy HP [Header]
-                Hypervisor.Write(0x180A86 + 0x2400, POSITIVE_OFFSET); // Enemy HP ???
-                Hypervisor.Write(0x180AB5 + 0x2400, POSITIVE_OFFSET); // Enemy HP [Backdrop]
-                Hypervisor.Write(0x180AE4 + 0x2400, POSITIVE_OFFSET); // Enemy HP [Tail]
-                Hypervisor.Write(0x180B13 + 0x2400, POSITIVE_OFFSET); // Enemy HP [Damage]
-                Hypervisor.Write(0x180B42 + 0x2400, POSITIVE_OFFSET); // Enemy HP [Main Bar]
-                Hypervisor.Write(0x180C49 + 0x2400, POSITIVE_OFFSET); // Enemy HP [Extra Bars]
+                Hypervisor.Write(0x180E5A, POSITIVE_OFFSET);
+                Hypervisor.Write(0x180EFF, POSITIVE_OFFSET);
 
-                Hypervisor.Write(0x17CEBB + 0x2400, POSITIVE_OFFSET); // Sora Backdrop
-                Hypervisor.Write(0x17CF13 + 0x2400, POSITIVE_OFFSET); // Sora HP [Backdrop]
-                Hypervisor.Write(0x17CF5A + 0x2400, POSITIVE_OFFSET); // Sora HP [Complete]
-                Hypervisor.Write(0x17CF7F + 0x2400, POSITIVE_OFFSET); // Sora Face
-                Hypervisor.Write(0x17CF99 + 0x2400, POSITIVE_OFFSET); // Sora MP [Header]
-                Hypervisor.Write(0x17CFC9 + 0x2400, POSITIVE_OFFSET); // Sora MP [Backdrop]
-                Hypervisor.Write(0x17CFF9 + 0x2400, POSITIVE_OFFSET); // Sora MP [Bar]
-                Hypervisor.Write(0x17D029 + 0x2400, POSITIVE_OFFSET); // Sora ???
-                Hypervisor.Write(0x17D1E5 + 0x2400, POSITIVE_OFFSET); // Sora Drive
-                Hypervisor.Write(0x17D219 + 0x2400, POSITIVE_OFFSET); // Sora ???
+                Hypervisor.Write(0x181D89, POSITIVE_OFFSET);
 
-                Hypervisor.Write(0x17E7BF + 0x2400, POSITIVE_OFFSET); // Drive Return
-                Hypervisor.Write(0x17F5A9 + 0x2400, POSITIVE_OFFSET); // Drive ???
-                Hypervisor.Write(0x17F17D + 0x2400, POSITIVE_OFFSET); // ???
-                Hypervisor.Write(0x17E5F8 + 0x2400, POSITIVE_OFFSET); // Drive Transform
+                Hypervisor.Write(0x182E4C, POSITIVE_OFFSET);
+                Hypervisor.Write(0x182E86, POSITIVE_OFFSET);
+                Hypervisor.Write(0x182EB5, POSITIVE_OFFSET);
+                Hypervisor.Write(0x182EE4, POSITIVE_OFFSET);
+                Hypervisor.Write(0x182F13, POSITIVE_OFFSET);
+                Hypervisor.Write(0x182F42, POSITIVE_OFFSET);
+                Hypervisor.Write(0x183049, POSITIVE_OFFSET);
 
-                Hypervisor.Write(0x17EA5A + 0x2400, POSITIVE_OFFSET); // Summon Backdrop
-                Hypervisor.Write(0x17EAFF + 0x2400, POSITIVE_OFFSET); // Summon Face
+                Hypervisor.Write(0x18BA66, POSITIVE_OFFSET);
+                Hypervisor.Write(0x18B757, NEGATIVE_OFFSET);
 
-                Hypervisor.Write(0x18A156 + 0x2400, POSITIVE_OFFSET); // Mission Gauge - Align Right
-                Hypervisor.Write(0x18A532 + 0x2400, NEGATIVE_OFFSET); // Mission Gauge - Align Left
+                Hypervisor.Write(0x18C556, POSITIVE_OFFSET);
+                Hypervisor.Write(0x18C932, NEGATIVE_OFFSET);
 
-                Hypervisor.Write(0x189666 + 0x2400, POSITIVE_OFFSET); // Mission Count - Align Right
-                Hypervisor.Write(0x189357 + 0x2400, NEGATIVE_OFFSET); // Mission Count - Align Left
+                Hypervisor.Write(0x18CEF6, NEGATIVE_OFFSET);
+                Hypervisor.Write(0x18D0D7, POSITIVE_OFFSET);
 
-                Hypervisor.Write(0x18ACD7 + 0x2400, POSITIVE_OFFSET); // All Timers - Align Right
-                Hypervisor.Write(0x18AAF6 + 0x2400, NEGATIVE_OFFSET); // All Timers - Align Left
+                Hypervisor.Write(0x18DD06, NEGATIVE_OFFSET);
+                Hypervisor.Write(0x18DD3A, NEGATIVE_OFFSET);
 
-                Hypervisor.Write(0x18C18F + 0x2400, NEGATIVE_OFFSET); // Get Munny
+                Hypervisor.Write(0x18E58F, NEGATIVE_OFFSET);
+                #endif
             }
         }
 
@@ -745,8 +773,21 @@ namespace ReFined.KH2.Functions
             var _isEscape = _worldRead == 0x06 && _roomRead == 0x05 && _eventRead == 0x6F;
 
             var _blacklistCheck =
-               (_worldRead == 0x04 && _roomRead >= 0x15 && _roomRead <= 0x1A)
-            || (_worldRead == 0x06 && _roomRead == 0x09 && _eventRead >= 0xBD && _eventRead <= 0xC4);
+               (_worldRead == 0x08 && _roomRead == 0x03)
+            || (_worldRead == 0x04 && _roomRead >= 0x15 && _roomRead <= 0x1A)
+            || (_worldRead == 0x06 && _roomRead == 0x09 && _eventRead >= 0xBD && _eventRead <= 0xC4)
+            || (_worldRead == 0x11 && _roomRead == 0x02 && _eventRead >= 0x3D && _eventRead <= 0x3F);
+
+            if (Variables.IS_TITLE && RETRY_MODE != 0x00)
+            {
+                Terminal.Log("Title Screen detected whilst Retry is active! Falling back to defaults.", 0);
+
+                Hypervisor.Write(WARP_OFFSET, WARP_FUNCTION);
+                Hypervisor.Write(INVT_OFFSET, INVT_FUNCTION);
+
+                RETRY_MODE = 0x00;
+                HADES_COUNT = 0x00;
+            }
 
             if (!_blacklistCheck && !Variables.IS_TITLE)
             {
@@ -830,6 +871,12 @@ namespace ReFined.KH2.Functions
                     var _continueButton = Variables.RETRY_DEFAULT ? 0x02 : 0x00;
 
                     var _buttonCheck = _selectRead == _retryButton || _selectRead == _prepareButton;
+
+                    if (_isEscape && HADES_COUNT > 0)
+                    {
+                        HADES_COUNT = 0;
+                        Terminal.Log("Death during Hades detected! Reseting count...", 0);
+                    }
 
                     if (!_buttonCheck && _selectRead < 0x04 && RETRY_MODE != 0x00)
                     {
@@ -935,8 +982,8 @@ namespace ReFined.KH2.Functions
 
         public static void HandleCrown()
         {
-            // Prepare the suffic according to the language.
-            var _suffixFile = (Variables.AUDIO_MODE == 0x00) ? ".a.us" : ".a.jp";
+            // Prepare the suffix according to the language.
+            var _fileFormatter = Hypervisor.ReadString(Variables.ADDR_PAXFormatter + 0x10);
 
             // Read the values.
             var _cutsceneRead = Hypervisor.Read<byte>(Variables.ADDR_CutsceneFlag);
@@ -957,13 +1004,13 @@ namespace ReFined.KH2.Functions
                 // Find the .a.xx files in game cache.
                 LOAD_LIST =
                 [
-                    Operations.FindFile("obj/P_EX100" + _suffixFile),
-                    Operations.FindFile("obj/P_EX100_BTLF" + _suffixFile),
-                    Operations.FindFile("obj/P_EX100_MAGF" + _suffixFile),
-                    Operations.FindFile("obj/P_EX100_KH1F" + _suffixFile),
-                    Operations.FindFile("obj/P_EX100_TRIF" + _suffixFile),
-                    Operations.FindFile("obj/P_EX100_ULTF" + _suffixFile),
-                    Operations.FindFile("obj/P_EX100_HTLF" + _suffixFile)
+                    Operations.FindFile(_fileFormatter.Replace("%s", "P_EX100")),
+                    Operations.FindFile(_fileFormatter.Replace("%s", "P_EX100_BTLF")),
+                    Operations.FindFile(_fileFormatter.Replace("%s", "P_EX100_MAGF")),
+                    Operations.FindFile(_fileFormatter.Replace("%s", "P_EX100_KH1F")),
+                    Operations.FindFile(_fileFormatter.Replace("%s", "P_EX100_TRIF")),
+                    Operations.FindFile(_fileFormatter.Replace("%s", "P_EX100_ULTF")),
+                    Operations.FindFile(_fileFormatter.Replace("%s", "P_EX100_HTLF"))
                 ];
 
                 // Fetch the pointers to the files.

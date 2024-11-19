@@ -11,8 +11,8 @@ namespace ReFined.KH2.Functions
         public static ulong PROMPT_OFFSET;
         public static ulong LIMITER_OFFSET;
 
-        public static byte[]? LIMITER_FUNCTION = null;
         public static short[] LIMIT_SHORT;
+        public static byte[] LIMITER_FUNCTION = null;
 
         public static void ToggleWarpGOA()
         {
@@ -62,7 +62,8 @@ namespace ReFined.KH2.Functions
                 Hypervisor.Write(PROMPT_OFFSET + 0x06, (byte)(Variables.CONTROLLER_MODE ? 0x00 : 0x01));
             }
 
-            Hypervisor.Write(Variables.ADDR_ControllerMode, (byte)(Variables.CONTROLLER_MODE ? 0x00 : 0x01));
+            if (Variables.CONTROLLER_MODE)
+            Hypervisor.Write(Variables.ADDR_ControllerMode, 0x00);
         }
 
         public static void ToggleLimitShortcuts()
@@ -102,8 +103,9 @@ namespace ReFined.KH2.Functions
             var _eventRead = Hypervisor.Read<ushort>(Variables.ADDR_Area + 0x04);
 
             var _formValue = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x3524);
-            var _healthValue = Hypervisor.Read<byte>(0x2A23598);
-            var _magicValue = Hypervisor.Read<byte>(0x2A23718);
+
+            var _healthValue = Hypervisor.Read<byte>(Variables.ADDR_PlayerHP);
+            var _magicValue = Hypervisor.Read<byte>(Variables.ADDR_PlayerHP + 0x180);
 
             var _battleFlag = Hypervisor.Read<byte>(Variables.ADDR_BattleFlag);
             var _diffValue = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x2498);
@@ -184,6 +186,6 @@ namespace ReFined.KH2.Functions
                 );
             }
         }
-
+        
     }
 }

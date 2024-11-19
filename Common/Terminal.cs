@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Reflection;
 
 namespace ReFined.Common
 {
@@ -14,8 +13,12 @@ namespace ReFined.Common
         {
             try
             {
-                var _documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                var _logDir = Path.Combine(_documentsPath, "Kingdom Hearts/Logs");
+                var _currentAssembly = Assembly.GetExecutingAssembly().Location;
+                var _documentsPath = Path.GetDirectoryName(_currentAssembly);
+                var _logDir = Path.Combine(_documentsPath, "Logs");
+
+                if (!Directory.Exists(_logDir))
+                    Directory.CreateDirectory(_logDir);
 
                 var _formatStr = "{0}{1}: {2}";
 

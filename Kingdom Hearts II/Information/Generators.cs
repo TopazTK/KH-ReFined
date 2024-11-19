@@ -74,7 +74,7 @@ namespace ReFined.KH2.Information
                 Terminal.Log("Main file doesn't have a save! Autosave aborted.", 1);
 
                 if (Variables.SAVE_MODE == 0x00)
-                    Message.ShowInformation(0x0103);
+                    InGame.Message.ShowInformation(0x0103);
 
                 return;
             }
@@ -162,7 +162,7 @@ namespace ReFined.KH2.Information
             if (Variables.SAVE_MODE == 0x00)
             {
                 Hypervisor.Write<byte>(0x18DE09, 0x28);
-                Message.ShowInformation(0x0102);
+                InGame.Message.ShowInformation(0x0102);
                 Hypervisor.Write<byte>(0x18DE09, 0x22);
             }
         }

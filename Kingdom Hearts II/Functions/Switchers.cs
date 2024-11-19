@@ -8,6 +8,8 @@ namespace ReFined.KH2.Functions
 {
     public static class Switchers
     {
+        public static IntPtr OffsetResetCM;
+
         static string WL_SUFF;
         static string US_SUFF;
         static string FM_SUFF;
@@ -16,53 +18,98 @@ namespace ReFined.KH2.Functions
         static bool PAST_ENEMY;
         static byte[] OBJENTRY_READ;
 
+        static byte PAST_VLAD = 0x00;
+
+        public static void SwitchCommand()
+        {
+            var _pauseCheck = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag);
+            var _checkString = Hypervisor.ReadString(Variables.ADDR_CommandMenu);
+            var _vladBit = Hypervisor.Read<byte>(Variables.ADDR_Config + 0x03);
+
+            if (_vladBit == 0x01 && !_checkString.Contains("qd0command"))
+            {
+                Terminal.Log("Toggling the Quadratum Command Menu.", 0x00);
+
+                Hypervisor.WriteString(Variables.ADDR_CommandMenu, "field2d/%s/qd0command.2dd");
+                Hypervisor.WriteString(Variables.ADDR_CommandMenu + 0x20, "qd0command.2dd");
+
+                Hypervisor.Write(Variables.ADDR_CommandFlag, 0x02);
+                Variables.SharpHook[OffsetResetCM].Execute();
+            }
+
+            else if (_vladBit == 0x00 && !_checkString.Contains("zz0command"))
+            {
+                Terminal.Log("Toggling the Classic Command Menu.", 0x00);
+
+                Hypervisor.WriteString(Variables.ADDR_CommandMenu, "field2d/%s/zz0command.2dd");
+                Hypervisor.WriteString(Variables.ADDR_CommandMenu + 0x20, "zz0command.2dd");
+
+                Hypervisor.Write(Variables.ADDR_CommandFlag, 0x02);
+                Variables.SharpHook[OffsetResetCM].Execute();
+            }
+        }
+
         public static void SwitchAudio()
         {
-            var _byteCheck = Hypervisor.Read<byte>(Variables.ADDR_EVTFormatter, 0x0F);
-            var _stringCheck = Encoding.Default.GetString(_byteCheck);
+            var _audioRead = Hypervisor.Read<byte>(Variables.ADDR_Config + 0x02);
+            var _paxCheck = Hypervisor.ReadString(Variables.ADDR_PAXFormatter + 0x10);
 
             var _stringANM = "anm/{0}/";
             var _stringPAX = "obj/%s.a.{0}";
-            var _stringEVT = "voice/{0}/event";
-            var _stringBTL = "voice/{0}/battle";
+            var _stringEVT = "voice/{0}/event/";
+            var _stringBTL = "voice/{0}/battle/";
 
-            if (Variables.AUDIO_MODE == 0x01 && _stringCheck != "voice/jp/event/")
+            var _audioSuffix = "us";
+            var _audioFormat = String.Format(_stringPAX, _audioSuffix);
+
+            US_SUFF = "us";
+            FM_SUFF = "fm";
+
+            if (Variables.AUDIO_MODE == 0x01)
             {
-                Terminal.Log("Switching to Japanese Audio...", 0);
+                _audioSuffix = Variables.LOADED_LANGS[0x00].ToLower();
+                _audioFormat = String.Format(_stringPAX, _audioSuffix);
 
-                WL_SUFF = "jp";
-                US_SUFF = "jp";
-                FM_SUFF = "jp";
+                if (Critical.AUDIO_SUB_ONLY)
+                {
+                     _audioSuffix = Variables.LOADED_LANGS[_audioRead].ToLower();
+                     _audioFormat = String.Format(_stringPAX, _audioSuffix);
+                }
             }
 
-            if (Variables.AUDIO_MODE == 0x02 && _stringCheck != "voice/xx/event/")
+            else if (Variables.AUDIO_MODE == 0x02)
             {
-                Terminal.Log("Switching to Extra Audio...", 0);
-
-                WL_SUFF = "xx";
-                US_SUFF = "xx";
-                FM_SUFF = "xx";
+                _audioSuffix = Variables.LOADED_LANGS[_audioRead + 0x01].ToLower();
+                _audioFormat = String.Format(_stringPAX, _audioSuffix);
             }
 
-            if (Variables.AUDIO_MODE == 0x00 && _stringCheck != "voice/us/event/")
+            if (_paxCheck != _audioFormat)
             {
-                Terminal.Log("Switching to English Audio...", 0);
+                Terminal.Log("Switching to " + _audioSuffix.ToUpper() + " Audio...", 0);
 
-                WL_SUFF = "%s";
-                US_SUFF = "us";
-                FM_SUFF = "fm";
-            }
+                if (Variables.AUDIO_MODE != 0x00)
+                {
+                    US_SUFF = _audioSuffix;
+                    FM_SUFF = _audioSuffix;
+                }
 
-            if (_stringCheck != String.Format(_stringPAX, WL_SUFF))
-            {
-                Hypervisor.Write(Variables.ADDR_PAXFormatter, Encoding.Default.GetBytes(String.Format(_stringPAX, WL_SUFF)));
-                Hypervisor.Write(Variables.ADDR_PAXFormatter + 0x10, Encoding.Default.GetBytes(String.Format(_stringPAX, US_SUFF)));
+                Hypervisor.WriteString(Variables.ADDR_PAXFormatter, String.Format(_stringPAX, FM_SUFF));
+                Hypervisor.WriteString(Variables.ADDR_PAXFormatter + 0x10, String.Format(_stringPAX, US_SUFF));
 
-                Hypervisor.Write(Variables.ADDR_ANBFormatter, Encoding.Default.GetBytes(String.Format(_stringANM, US_SUFF)));
-                Hypervisor.Write(Variables.ADDR_ANBFormatter + 0x08, Encoding.Default.GetBytes(String.Format(_stringANM, FM_SUFF)));
+                if (US_SUFF != "jp")
+                {
+                    Hypervisor.WriteString(Variables.ADDR_ANBFormatter, String.Format(_stringANM, "us"));
+                    Hypervisor.WriteString(Variables.ADDR_ANBFormatter + 0x08, String.Format(_stringANM, "fm"));
+                }
 
-                Hypervisor.Write(Variables.ADDR_BTLFormatter, Encoding.Default.GetBytes(String.Format(_stringBTL, US_SUFF)));
-                Hypervisor.Write(Variables.ADDR_EVTFormatter, Encoding.Default.GetBytes(String.Format(_stringEVT, US_SUFF)));
+                else
+                {
+                    Hypervisor.WriteString(Variables.ADDR_ANBFormatter, String.Format(_stringANM, US_SUFF));
+                    Hypervisor.WriteString(Variables.ADDR_ANBFormatter + 0x08, String.Format(_stringANM, FM_SUFF));
+                }
+
+                Hypervisor.WriteString(Variables.ADDR_BTLFormatter, String.Format(_stringBTL, US_SUFF));
+                Hypervisor.WriteString(Variables.ADDR_EVTFormatter, String.Format(_stringEVT, US_SUFF));
             }
         }
 

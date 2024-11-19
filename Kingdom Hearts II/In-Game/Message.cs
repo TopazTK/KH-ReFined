@@ -1,7 +1,6 @@
 ﻿using ReFined.Common;
-using ReFined.KH2.Functions;
-using ReFined.KH2.Information;
 using ReFined.Libraries;
+using ReFined.KH2.Information;
 
 using BSharpConvention = Binarysharp.MSharp.Assembly.CallingConvention.CallingConventions;
 
