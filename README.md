@@ -111,7 +111,7 @@ The current official addons for each game can be seen below, and what they do be
 The addon system allows the end user to make their own addons for Re:Fined to add their own custom sound packs, music packs, etc. A guide on how to create these packs will be made and posted to the Wiki soon!
 
 > [!IMPORTANT]  
-> The end user is responsible for all that can go wrong when using community addons.
+> The end user is responsible for all that can go wrong when using community addons.  
 > The Re:Fined Team will not accept any responsibility for anything that can happen as a result of community addons.
 
 ## Compiling and Contributions
