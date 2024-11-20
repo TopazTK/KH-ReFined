@@ -1,7 +1,7 @@
 <div align="center">
 
 # Kingdom Hearts - Re:Fined
-![License](https://img.shields.io/badge/License-MIT-blue)
+![License](https://img.shields.io/badge/License-GPL_v3.0-blue)
 ![Version](https://img.shields.io/badge/Current_Version-v1.15-dark_lime)
 [![Discord](https://img.shields.io/discord/978975211481354251?logo=Discord&logoColor=%23f0f0f0&label=Discord%20Server&color=6A7EC2)](https://discord.gg/kh-refined)
 [![Patreon](https://img.shields.io/endpoint?url=https%3A%2F%2Fshieldsio-Patreon.vercel.app%2Fapi%2F%3Fusername%3Dtopaztk%26type%3DPatrons)](https://www.patreon.com/topaztk)  
