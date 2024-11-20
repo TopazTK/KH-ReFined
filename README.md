@@ -24,7 +24,9 @@ The project has two modes of operation within every game, which alters their fea
 - **Re:Fined Mode** [known internally as Full Mode] will enable all features. This makes the mod illegal in speedrunning.
 
 The project is currently compatible with the worldwide releases on **Epic Games Store** and **Steam**.  
-Compatibility for the Japanese releases is underway.
+Compatibility for the Japanese releases is underway.  
+
+The project also supports the Steam Deck and most all Linux distros. But setting it up on those may require extra steps. An install guide will be uploaded to the Wiki soon!
 
 > [!IMPORTANT]  
 > The games utilize OpenKH in order to add in new features and fix some bugs. Please refer to the Wiki for installation guides and general how-to stuff.
