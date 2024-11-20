@@ -2,7 +2,7 @@
 
 # Kingdom Hearts - Re:Fined
 ![License](https://img.shields.io/badge/License-GPL_v3.0-blue)
-![Version](https://img.shields.io/badge/Current_Version-v1.15-dark_lime)
+![Version](https://img.shields.io/badge/Current_Version-v1.20-dark_lime)
 [![Discord](https://img.shields.io/discord/978975211481354251?logo=Discord&logoColor=%23f0f0f0&label=Discord%20Server&color=6A7EC2)](https://discord.gg/kh-refined)
 [![Patreon](https://img.shields.io/endpoint?url=https%3A%2F%2Fshieldsio-Patreon.vercel.app%2Fapi%2F%3Fusername%3Dtopaztk%26type%3DPatrons)](https://www.patreon.com/topaztk)  
 
@@ -61,6 +61,7 @@ However, there are also features that are common across every game, which you ca
 | :heavy_check_mark: | - | Correct Limit Form's Limit names so that they are more accurately translated. [[4]](#reference) |
 | :heavy_check_mark: | - | Restore the ability to exit the game from the title screen. |
 | :heavy_check_mark: | - | The Credits FMV can now be skipped. |
+| :heavy_check_mark: | - | Fix the Save Point lighting up indefinitely. |
 | :heavy_check_mark: | - | The "Right Stick" configuration option has been restored. |
 | - | :heavy_check_mark: | Removed the FMV on the Title Screen. |
 | - | :heavy_check_mark: | The player can now retry all forced encounters. [[5]](#reference) |
