@@ -152,5 +152,5 @@ Thank you for your consideration, all support is appreciated!
 
 Re:Fined makes use of the following third-party libraries for it's functionality:
 
-[Discord-RPC-CSharp by Lachee](https://github.com/Lachee/discord-rpc-csharp)
+[Discord-RPC-CSharp by Lachee](https://github.com/Lachee/discord-rpc-csharp)  
 [MemorySharp by JamesMenetrey](https://github.com/JamesMenetrey/MemorySharp)
