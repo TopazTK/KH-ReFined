@@ -34,7 +34,6 @@ namespace ReFined.KH2.Functions
                 Hypervisor.WriteString(Variables.ADDR_CommandMenu + 0x20, "qd0command.2dd");
 
                 Hypervisor.Write(Variables.ADDR_CommandFlag, 0x02);
-                Variables.SharpHook[OffsetResetCM].Execute();
             }
 
             else if (_vladBit == 0x00 && !_checkString.Contains("zz0command"))
@@ -45,14 +44,13 @@ namespace ReFined.KH2.Functions
                 Hypervisor.WriteString(Variables.ADDR_CommandMenu + 0x20, "zz0command.2dd");
 
                 Hypervisor.Write(Variables.ADDR_CommandFlag, 0x02);
-                Variables.SharpHook[OffsetResetCM].Execute();
             }
         }
 
         public static void SwitchAudio()
         {
             var _audioRead = Hypervisor.Read<byte>(Variables.ADDR_Config + 0x02);
-            var _paxCheck = Hypervisor.ReadString(Variables.ADDR_PAXFormatter + 0x10);
+            var _paxCheck = Hypervisor.ReadString(Variables.DATA_PAXPath + 0x10);
 
             var _stringANM = "anm/{0}/";
             var _stringPAX = "obj/%s.a.{0}";
@@ -86,30 +84,30 @@ namespace ReFined.KH2.Functions
             if (_paxCheck != _audioFormat)
             {
                 Terminal.Log("Switching to " + _audioSuffix.ToUpper() + " Audio...", 0);
-
+                
                 if (Variables.AUDIO_MODE != 0x00)
                 {
                     US_SUFF = _audioSuffix;
                     FM_SUFF = _audioSuffix;
                 }
 
-                Hypervisor.WriteString(Variables.ADDR_PAXFormatter, String.Format(_stringPAX, FM_SUFF));
-                Hypervisor.WriteString(Variables.ADDR_PAXFormatter + 0x10, String.Format(_stringPAX, US_SUFF));
+                Hypervisor.WriteString(Variables.DATA_PAXPath, String.Format(_stringPAX, FM_SUFF));
+                Hypervisor.WriteString(Variables.DATA_PAXPath + 0x10, String.Format(_stringPAX, US_SUFF));
 
                 if (US_SUFF != "jp")
                 {
-                    Hypervisor.WriteString(Variables.ADDR_ANBFormatter, String.Format(_stringANM, "us"));
-                    Hypervisor.WriteString(Variables.ADDR_ANBFormatter + 0x08, String.Format(_stringANM, "fm"));
+                    Hypervisor.WriteString(Variables.DATA_ANBPath, String.Format(_stringANM, "us"));
+                    Hypervisor.WriteString(Variables.DATA_ANBPath + 0x08, String.Format(_stringANM, "fm"));
                 }
 
                 else
                 {
-                    Hypervisor.WriteString(Variables.ADDR_ANBFormatter, String.Format(_stringANM, US_SUFF));
-                    Hypervisor.WriteString(Variables.ADDR_ANBFormatter + 0x08, String.Format(_stringANM, FM_SUFF));
+                    Hypervisor.WriteString(Variables.DATA_ANBPath, String.Format(_stringANM, US_SUFF));
+                    Hypervisor.WriteString(Variables.DATA_ANBPath + 0x08, String.Format(_stringANM, FM_SUFF));
                 }
 
-                Hypervisor.WriteString(Variables.ADDR_BTLFormatter, String.Format(_stringBTL, US_SUFF));
-                Hypervisor.WriteString(Variables.ADDR_EVTFormatter, String.Format(_stringEVT, US_SUFF));
+                Hypervisor.WriteString(Variables.DATA_BTLPath, String.Format(_stringBTL, US_SUFF));
+                Hypervisor.WriteString(Variables.DATA_EVTPath, String.Format(_stringEVT, US_SUFF));
             }
         }
 
@@ -118,7 +116,7 @@ namespace ReFined.KH2.Functions
             if (Variables.MUSIC_VANILLA != PAST_MUSIC)
             {
                 Terminal.Log(String.Format("Switching Music to {0}...", Variables.MUSIC_VANILLA ? "Vanilla" : "Remastered"), 0);
-                Hypervisor.Write<byte>(Variables.ADDR_MusicPath, Variables.MUSIC_VANILLA ? [0x70, 0x73, 0x32, 0x6D, 0x64] : [0x6D, 0x75, 0x73, 0x69, 0x63]);
+                Hypervisor.Write<byte>(Variables.DATA_BGMPath, Variables.MUSIC_VANILLA ? [0x70, 0x73, 0x32, 0x6D, 0x64] : [0x6D, 0x75, 0x73, 0x69, 0x63]);
 
                 PAST_MUSIC = Variables.MUSIC_VANILLA;
             }
@@ -131,11 +129,11 @@ namespace ReFined.KH2.Functions
 
             if (OBJENTRY_READ == null)
             {
-                var _headerCheck = Hypervisor.Read<byte>(Variables.ADDR_ObjentryBASE);
-                var _itemCount = Hypervisor.Read<int>(Variables.ADDR_ObjentryBASE + 0x04);
+                var _headerCheck = Hypervisor.Read<byte>(Variables.ADDR_ObjentryBase);
+                var _itemCount = Hypervisor.Read<int>(Variables.ADDR_ObjentryBase + 0x04);
 
                 if (_headerCheck == 0x03)
-                    OBJENTRY_READ = Hypervisor.Read<byte>(Variables.ADDR_ObjentryBASE + 0x08, 0x60 * _itemCount);
+                    OBJENTRY_READ = Hypervisor.Read<byte>(Variables.ADDR_ObjentryBase + 0x08, 0x60 * _itemCount);
             }
 
             if (OBJENTRY_READ != null)
@@ -159,7 +157,7 @@ namespace ReFined.KH2.Functions
                             break;
 
                         else
-                            Hypervisor.Write(Variables.ADDR_ObjentryBASE + 0x08 + (_searchClassic == 0xFFFFFFFFFFFFFFFF ? _searchRemastered : _searchClassic), _bossPrefix);
+                            Hypervisor.Write(Variables.ADDR_ObjentryBase + 0x08 + (_searchClassic == 0xFFFFFFFFFFFFFFFF ? _searchRemastered : _searchClassic), _bossPrefix);
                     }
 
                     foreach (var _name in Variables.ENEMYObjentry)
@@ -174,7 +172,7 @@ namespace ReFined.KH2.Functions
                             break;
 
                         else
-                            Hypervisor.Write(Variables.ADDR_ObjentryBASE + 0x08 + (_searchClassic == 0xFFFFFFFFFFFFFFFF ? _searchRemastered : _searchClassic), _enemyPrefix);
+                            Hypervisor.Write(Variables.ADDR_ObjentryBase + 0x08 + (_searchClassic == 0xFFFFFFFFFFFFFFFF ? _searchRemastered : _searchClassic), _enemyPrefix);
                     }
 
                     PAST_ENEMY = Variables.ENEMY_VANILLA;

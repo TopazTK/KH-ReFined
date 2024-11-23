@@ -4,15 +4,10 @@ namespace ReFined.KH2.InGame
 {
     public static class Sound
     {
-        public static IntPtr OffsetSound;
+        public static nint FUNC_PLAYSFX;
+        public static nint FUNC_KILLBGM;
 
-        /// <summary>
-        /// Plays a sound effect according to the ID given.
-        /// </summary>
-        /// <param name="SoundID">The ID of the sound to be played.</param>
-        public static void PlaySFX(int SoundID)
-        {
-            Variables.SharpHook[OffsetSound].Execute(SoundID);
-        }
+        public static void PlaySFX(int SoundID) => Variables.SharpHook[FUNC_PLAYSFX].Execute(SoundID);
+        public static void KillBGM() => Variables.SharpHook[FUNC_KILLBGM].Execute();
     }
 }

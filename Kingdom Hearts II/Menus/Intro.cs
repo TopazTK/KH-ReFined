@@ -91,7 +91,7 @@ namespace ReFined.KH2.Menus
         public void Submit(object? sender = null, NotifyCollectionChangedEventArgs e = null)
         {
             if (sender != null)
-                Terminal.Log("Inserting New Entry to Intro...", 0);
+                Terminal.Log("Editing Entries of Menu: Intro...", 0);
 
             else
                 Terminal.Log("Submitting Menu: Intro - " + Children.Count + " Entries detected!", 0);
@@ -101,7 +101,7 @@ namespace ReFined.KH2.Menus
                 var _childExport = Children[i].Export();
                 var _childWrite = _childExport.SelectMany(BitConverter.GetBytes).ToArray();
 
-                Hypervisor.Write(Variables.ADDR_NewGameMenu + (ulong)(i * 0x2C), _childWrite);
+                Hypervisor.Write(Variables.ADDR_IntroMenu + (ulong)(i * 0x2C), _childWrite);
             }
             
             byte _lastIndex = (byte)(Children.Count - 1);

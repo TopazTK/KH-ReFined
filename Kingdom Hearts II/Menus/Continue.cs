@@ -62,7 +62,7 @@ namespace ReFined.KH2.Menus
             var _continueOptions = Hypervisor.Read<ulong>(Variables.PINT_GameOverOptions);
 
             if (sender != null)
-                Terminal.Log("Inserting New Entry to Continue...", 0);
+                Terminal.Log("Editing Entries of Menu: Continue...", 0);
 
             else
                 Terminal.Log("Submitting Menu: Continue - " + Children.Count + " Entries detected!", 0);

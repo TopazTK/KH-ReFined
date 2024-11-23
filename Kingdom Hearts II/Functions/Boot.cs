@@ -6,30 +6,40 @@ using ReFined.KH2.Information;
 using System.Windows.Forms;
 
 using Binarysharp.MSharp;
+using Keystone;
 
 namespace ReFined.KH2.Functions
 {
     public static class Boot
     {
+        static string VERSION_STRING = "Re:Fined";
+
         public static void Initialization()
         {
-            var _versionString = "Re:Fined";
-
             Configuration.Initialize();
             var _configIni = new INI("reFined.cfg");
 
-            Variables.DISCORD_TOGGLE = Convert.ToBoolean(_configIni.Read("discordRPC", "General"));
             Variables.IS_LITE = Convert.ToBoolean(_configIni.Read("liteMode", "General"));
-            Variables.RESET_PROMPT = Convert.ToBoolean(_configIni.Read("resetPrompt", "Kingdom Hearts II"));
-            Variables.RESET_COMBO = Convert.ToUInt16(_configIni.Read("resetCombo", "General"), 16);
-            Variables.RETRY_DEFAULT = _configIni.Read("deathPrompt", "Kingdom Hearts II") == "retry" ? true : false;
             Variables.LIMIT_SHORTS = _configIni.Read("limitShortcuts", "Kingdom Hearts II");
+            Variables.DISCORD_TOGGLE = Convert.ToBoolean(_configIni.Read("discordRPC", "General"));
+            Variables.RESET_PROMPT = Convert.ToBoolean(_configIni.Read("resetPrompt", "Kingdom Hearts II"));
             Variables.FORM_SHORTCUT = Convert.ToBoolean(_configIni.Read("driveShortcuts", "Kingdom Hearts II"));
+            Variables.RETRY_DEFAULT = _configIni.Read("deathPrompt", "Kingdom Hearts II") == "retry" ? true : false;
+            Variables.RESET_COMBO = (Variables.BUTTON)Convert.ToUInt16(_configIni.Read("resetCombo", "General"), 16);
 
-            _versionString = Variables.IS_LITE ? "Re:Freshed" : "Re:Fined";
+            VERSION_STRING = Variables.IS_LITE ? "Re:Freshed" : "Re:Fined";
 
-            Terminal.Log("Welcome to " + _versionString + " Patreon BETA v0.75!", 0);
-            Terminal.Log("Please be patient while " + _versionString + " initializes.", 0);
+            Terminal.Log("Welcome to " + VERSION_STRING + " v1.50", 0);
+            Terminal.Log("Please be patient while " + VERSION_STRING + " initializes.", 0);
+
+            if (!File.Exists("keystone.dll") ||
+                !File.Exists("Newtonsoft.Json.dll"))
+            {
+                var _errorBox = MessageBox.Show(String.Format(Variables.ERROR_550, VERSION_STRING), "ERROR #550 - Missing Libraries Detected!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                if (_errorBox == DialogResult.OK || _errorBox == DialogResult.Cancel)
+                    Environment.Exit(550);
+            }
 
             Terminal.Log("Initializing SharpHook...", 0);
             Variables.SharpHook = new MemorySharp(Hypervisor.Process);
@@ -41,30 +51,29 @@ namespace ReFined.KH2.Functions
 
             Switchers.OffsetResetCM = Hypervisor.FindSignature(Variables.FUNC_ResetCommandMenu);
 
-            ReFined.KH2.InGame.Message.OffsetMenu = Hypervisor.FindSignature(Variables.FUNC_SetMenuType);
-            ReFined.KH2.InGame.Message.OffsetInfo = Hypervisor.FindSignature(Variables.FUNC_ShowInformation);
-            ReFined.KH2.InGame.Message.OffsetObtained = Hypervisor.FindSignature(Variables.FUNC_ShowObatined);
+            Popups.FUNC_SHOWPRIZE = Hypervisor.FindSignature(Variables.FUNC_ShowObatined);
+            Popups.FUNC_STARTCAMP = Hypervisor.FindSignature(Variables.FUNC_ExecuteCampMenu);
+            Popups.FUNC_SHOWINFORMATION = Hypervisor.FindSignature(Variables.FUNC_ShowInformation);
 
-            ReFined.KH2.InGame.Message.OffsetSetSLWarning = Hypervisor.FindSignature(Variables.FUNC_SetSLWarning);
-            ReFined.KH2.InGame.Message.OffsetShowSLWarning = Hypervisor.FindSignature(Variables.FUNC_ShowSLWarning);
-            ReFined.KH2.InGame.Message.OffsetSetCampWarning = Hypervisor.FindSignature(Variables.FUNC_SetCampWarning);
-            ReFined.KH2.InGame.Message.OffsetShowCampWarning = Hypervisor.FindSignature(Variables.FUNC_ShowCampWarning);
-            ReFined.KH2.InGame.Message.OffsetFadeCampWarning = Hypervisor.FindSignature(Variables.FUNC_FadeCampWarning);
+            Dialogs.FUNC_SETMENUMODE = Hypervisor.FindSignature(Variables.FUNC_SetMenuType);
+            Dialogs.FUNC_SETCAMPWARNING = Hypervisor.FindSignature(Variables.FUNC_SetCampWarning);
+            Dialogs.FUNC_SHOWCAMPWARNING = Hypervisor.FindSignature(Variables.FUNC_ShowCampWarning);
+            Dialogs.FUNC_FADECAMPWARNING = Hypervisor.FindSignature(Variables.FUNC_FadeCampWarning);
 
-            Critical.OffsetCampMenu = Hypervisor.FindSignature(Variables.FUNC_ExecuteCampMenu);
-            Critical.OffsetShutMusic = Hypervisor.FindSignature(Variables.FUNC_StopBGM);
             Critical.OffsetMapJump = Hypervisor.FindSignature(Variables.FUNC_MapJump);
             Critical.OffsetSetFadeOff = Hypervisor.FindSignature(Variables.FUNC_SetFadeOff);
             Critical.OffsetConfigUpdate = Hypervisor.FindSignature(Variables.FUNC_ConfigUpdate);
             Critical.OffsetSelectUpdate = Hypervisor.FindSignature(Variables.FUNC_SelectUpdate);
 
-            Operations.OffsetFindFile = Hypervisor.FindSignature(Variables.FUNC_FindFile);
-            Operations.OffsetGetFileSize = Hypervisor.FindSignature(Variables.FUNC_GetFileSize);
+            Operations.FUNC_FINDFILE = Hypervisor.FindSignature(Variables.FUNC_FindFile);
+            Operations.FUNC_GETFILESIZE = Hypervisor.FindSignature(Variables.FUNC_GetFileSize);
 
-            Sound.OffsetSound = Hypervisor.FindSignature(Variables.FUNC_PlaySFX);
+            Sound.FUNC_PLAYSFX = Hypervisor.FindSignature(Variables.FUNC_PlaySFX);
+            Sound.FUNC_KILLBGM = Hypervisor.FindSignature(Variables.FUNC_StopBGM);
 
             Terminal.Log("Locating Hotfix Signatures...", 0);
 
+            Continuous.SAVE_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_SaveRecover);
             Continuous.LIMITER_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_Framelimiter);
             Continuous.PROMPT_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_ContPrompts);
 
@@ -77,6 +86,7 @@ namespace ReFined.KH2.Functions
             Critical.EQUIP_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_ShortcutEquipFilter);
             Critical.CATEGORY_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_ShortcutCategoryFilter);
             Critical.FORM_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_FormInventory);
+            Generators.OffsetSaveSound = (ulong)Hypervisor.FindSignature(Variables.HFIX_InfoSound);
 
             Critical.WARP_FUNCTION = Hypervisor.Read<byte>(Critical.WARP_OFFSET, 0x05);
             Critical.INVT_FUNCTION = Hypervisor.Read<byte>(Critical.INVT_OFFSET, 0x07);
@@ -101,12 +111,9 @@ namespace ReFined.KH2.Functions
             Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroSixth));
             Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroSeventh));
 
-            if (Operations.GetFileSize("itempic/item-271.imd") == 0)
+            if (Operations.GetFileSize("reFined.bin") == 0)
             {
-
-                var _errorBox = MessageBox.Show(_versionString + " was not able to locate the base patch!\n" +
-                                                                 "Please ensure that it is installed correctly!\n" +
-                                                                 _versionString + " will now terminate.", "ERROR #404 - Base Patch Not Found!", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                var _errorBox = MessageBox.Show(String.Format(Variables.ERROR_404, VERSION_STRING), "ERROR #404 - Base Patch Not Found!", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                 if (_errorBox == DialogResult.OK || _errorBox == DialogResult.Cancel)
                     Environment.Exit(404);
@@ -114,10 +121,7 @@ namespace ReFined.KH2.Functions
 
             if (Operations.GetFileSize("03system.bin") == 0)
             {
-                var _errorBox = MessageBox.Show("03system.bin is corrupt!\n" +
-                                                "This usually happens because the patch was installed with OpenKH without an extracted game!\n" +
-                                                "Please correct this error and try again!\n" +
-                                                _versionString + " will now terminate.", "ERROR #430 - 03system is Corrupt!", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                var _errorBox = MessageBox.Show(String.Format(Variables.ERROR_430, VERSION_STRING), "ERROR #430 - 03SYSTEM.BIN is Corrupt!", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                 if (_errorBox == DialogResult.OK || _errorBox == DialogResult.Cancel)
                     Environment.Exit(430);
@@ -138,9 +142,6 @@ namespace ReFined.KH2.Functions
                 ushort[][] _entryDE = !String.IsNullOrEmpty(Variables.LOADED_LANGS[1]) ? [[0x0112], [0x0113]] : [[], []];
                 ushort[][] _entryES = !String.IsNullOrEmpty(Variables.LOADED_LANGS[2]) ? [[0x0110], [0x0111]] : [[], []];
                 ushort[][] _entryFR = !String.IsNullOrEmpty(Variables.LOADED_LANGS[3]) ? [[0x0114], [0x0115]] : [[], []];
-
-                ushort _subDesc = 0x0117;
-                ushort _subLabel = 0x0116;
 
                 var _cfgAudioSub = new Config.Entry(0, 0x012B, [], []);
                 var _cfgAudioMain = new Config.Entry(0, 0x010B, [0x010C], [0x010D]);
@@ -196,9 +197,9 @@ namespace ReFined.KH2.Functions
                 Variables.LOADED_LANGS.RemoveAll(x => x == "");
 
                 Terminal.Log("Initializing Extra Options in the menus...", 0);
-                Terminal.Log("Languages Found: " + String.Join(", ", Variables.LOADED_LANGS), 0);
 
-                Variables.FORM_SHORTCUT = Convert.ToBoolean(_configIni.Read("driveShortcuts", "Kingdom Hearts II"));
+                if (Variables.LOADED_LANGS.Count > 0)
+                    Terminal.Log("Languages Found: " + String.Join(", ", Variables.LOADED_LANGS), 0);
 
                 if (Operations.GetFileSize("obj/V_BB100.mdlx") != 0x00)
                 {
@@ -207,7 +208,7 @@ namespace ReFined.KH2.Functions
                     var _entConfig = new Config.Entry(2, 0x011D, [0x011E, 0x0120], [0x011F, 0x0121]);
                     var _entIntro = new Intro.Entry(2, 0x0136, 0x0000, [0x011E, 0x0120], [0x011F, 0x0121]);
 
-                    Variables.INTRO_MENU.Children.Insert(2, _entIntro);
+                    Variables.INTRO_MENU.Children.Insert(4, _entIntro);
                     Variables.CONFIG_MENU.Children.Insert(9, _entConfig);
                 }
 
@@ -258,110 +259,136 @@ namespace ReFined.KH2.Functions
             Variables.Source = new CancellationTokenSource();
             Variables.Token = Variables.Source.Token;
 
-            Variables.Initialized = true;
+            Variables.INITIALIZED = true;
 
-            Terminal.Log(_versionString + " initialized with no errors!", 0);
+            Terminal.Log(VERSION_STRING + " initialized with no errors!", 0);
         }
 
         public static void Execute()
         {
-            var _audioActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x010B) == null ? false : true;
-            var _musicActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x0118) == null ? false : true;
-            var _enemyActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x011D) == null ? false : true;
-
-            Demand.TriggerReset();
-            Demand.TriggerShortcut();
-
-            Continuous.ToggleWarpGOA();
-            Continuous.ToggleLimiter();
-            Continuous.TogglePrompts();
-            Continuous.ToggleLimitShortcuts();
-
-            Critical.HandleConfig();
-            Critical.HandleIntro();
-
-            if (!Variables.IS_LITE)
+            try
             {
-                Switchers.SwitchCommand();
+                var _audioActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x010B) == null ? false : true;
+                var _musicActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x0118) == null ? false : true;
+                var _enemyActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x011D) == null ? false : true;
 
-                if (_audioActive)
-                    Switchers.SwitchAudio();
+                Demand.TriggerReset();
+                Demand.TriggerUpdate();
+                Demand.TriggerShortcut();
 
-                if (_musicActive)
-                    Switchers.SwitchMusic();
+                Continuous.ToggleWarpGOA();
+                Continuous.ToggleLimiter();
+                Continuous.TogglePrompts();
+                Continuous.ToggleSavePoint();
+                Continuous.ToggleLimitShortcuts();
 
-                if (_enemyActive)
-                    Switchers.SwitchEnemies();
+                Critical.HandleConfig();
+                Critical.HandleIntro();
 
-                Critical.HandleRetry();
-                Critical.HandleRatio();
-                Critical.HandleMagicSort();
-                Critical.HandleFormShortcuts();
+                if (!Variables.IS_LITE)
+                {
+                    Switchers.SwitchCommand();
 
-                Demand.TriggerEncounter();
-                Demand.TriggerPrologueSkip();
-            }
+                    if (_audioActive)
+                        Switchers.SwitchAudio();
 
-            Thread.Sleep(5);
+                    if (_musicActive)
+                        Switchers.SwitchMusic();
 
-            #region Tasks
-            if (Variables.ASTask == null || Variables.ASTask.IsFaulted || Variables.ASTask.IsCanceled)
-            {
-                Variables.ASTask = Task.Factory.StartNew(
+                    if (_enemyActive)
+                        Switchers.SwitchEnemies();
 
-                    delegate ()
-                    {
-                        while (!Variables.Token.IsCancellationRequested)
+                    Critical.HandleRetry();
+                    Critical.HandleRatio();
+                    Critical.HandleMagicSort();
+                    Critical.HandleFormShortcuts();
+
+                    Demand.TriggerEncounter();
+                    Demand.TriggerPrologueSkip();
+                }
+
+                Thread.Sleep(5);
+
+                #region Tasks
+                if (Variables.ASTask == null || Variables.ASTask.IsFaulted || Variables.ASTask.IsCanceled)
+                {
+                    Variables.ASTask = Task.Factory.StartNew(
+
+                        delegate ()
                         {
-                            if (!Critical.LOCK_AUTOSAVE)
-                                Critical.HandleAutosave();
+                            while (!Variables.Token.IsCancellationRequested)
+                            {
+                                if (!Critical.LOCK_AUTOSAVE)
+                                    Critical.HandleAutosave();
 
-                            Thread.Sleep(5);
-                        }
-                    },
+                                Thread.Sleep(5);
+                            }
+                        },
 
-                    Variables.Token
-                );
-            }
+                        Variables.Token
+                    );
+                }
 
-            if (Variables.DCTask == null || Variables.DCTask.IsFaulted || Variables.DCTask.IsCanceled)
-            {
-                Variables.DCTask = Task.Factory.StartNew(
+                if (Variables.DCTask == null || Variables.DCTask.IsFaulted || Variables.DCTask.IsCanceled)
+                {
+                    Variables.DCTask = Task.Factory.StartNew(
 
-                    delegate ()
-                    {
-                        while (!Variables.Token.IsCancellationRequested)
+                        delegate ()
                         {
-                            if (Variables.DISCORD_TOGGLE)
-                                Continuous.ToggleDiscord();
+                            while (!Variables.Token.IsCancellationRequested)
+                            {
+                                if (Variables.DISCORD_TOGGLE)
+                                    Continuous.ToggleDiscord();
 
-                            Thread.Sleep(5);
-                        }
-                    },
+                                Thread.Sleep(5);
+                            }
+                        },
 
-                    Variables.Token
-                );
-            }
+                        Variables.Token
+                    );
+                }
 
-            if (Variables.CRTask == null || Variables.CRTask.IsFaulted || Variables.CRTask.IsCanceled)
-            {
-                Variables.CRTask = Task.Factory.StartNew(
+                if (Variables.CRTask == null || Variables.CRTask.IsFaulted || Variables.CRTask.IsCanceled)
+                {
+                    Variables.CRTask = Task.Factory.StartNew(
 
-                    delegate ()
-                    {
-                        while (!Variables.Token.IsCancellationRequested)
+                        delegate ()
                         {
-                            if (!Variables.IS_LITE)
-                                Critical.HandleCrown();
+                            while (!Variables.Token.IsCancellationRequested)
+                            {
+                                if (!Variables.IS_LITE)
+                                    Critical.HandleCrown();
 
-                            Thread.Sleep(5);
-                        }
-                    },
+                                Thread.Sleep(5);
+                            }
+                        },
 
-                    Variables.Token
-                );
+                        Variables.Token
+                    );
+                }
+                #endregion
             }
-            #endregion
+
+            catch (Exception EX)
+            {
+                Terminal.Log(EX.ToString(), 2);
+
+                if (EX is KeystoneException)
+                {
+                    var _errorBox = MessageBox.Show(String.Format(Variables.ERROR_420, VERSION_STRING), "ERROR #420 - Keystone has crashed!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                    if (_errorBox == DialogResult.OK || _errorBox == DialogResult.Cancel)
+                        Environment.Exit(420);
+                }
+
+                else
+                {
+                    var _errorBox = MessageBox.Show(String.Format(Variables.ERROR_600, VERSION_STRING), "ERROR #600 - Illegal Operation Detected!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                    if (_errorBox == DialogResult.OK || _errorBox == DialogResult.Cancel)
+                        Environment.Exit(600);
+                }
+            }
         }
     }
 }

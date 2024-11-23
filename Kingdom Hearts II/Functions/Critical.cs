@@ -1,18 +1,15 @@
-﻿#define STEAM_RELEASE
-
-using ReFined.Common;
+﻿using ReFined.Common;
 using ReFined.Libraries;
-using ReFined.KH2.Information;
 using ReFined.KH2.Menus;
-using BSharpConvention = Binarysharp.MSharp.Assembly.CallingConvention.CallingConventions;
 using ReFined.KH2.InGame;
+using ReFined.KH2.Information;
+
+using BSharpConvention = Binarysharp.MSharp.Assembly.CallingConvention.CallingConventions;
 
 namespace ReFined.KH2.Functions
 {
     public static class Critical
     {
-        public static IntPtr OffsetCampMenu;
-        public static IntPtr OffsetShutMusic;
         public static IntPtr OffsetMapJump;
         public static IntPtr OffsetSetFadeOff;
         public static IntPtr OffsetConfigUpdate;
@@ -28,16 +25,18 @@ namespace ReFined.KH2.Functions
         public static ulong CATEGORY_OFFSET;
         public static ulong FORM_OFFSET;
 
-        public static byte[]? WARP_FUNCTION;
-        public static byte[]? INVT_FUNCTION;
+        public static byte[] WARP_FUNCTION;
+        public static byte[] INVT_FUNCTION;
         public static bool AUDIO_SUB_ONLY;
 
-        static Variables.CONFIG_BITWISE CONFIG_BIT;
         static bool SUB_INTRO_ACTIVE;
         static bool SUB_CONFIG_ACTIVE;
 
         static bool CONFIG_TOGGLE;
         static bool CONFIG_WRITTEN;
+        static Variables.CONFIG_BITWISE CONFIG_BIT;
+
+        static bool RETRY_HOLD;
 
         static bool[] DEBOUNCE = new bool[0x20];
 
@@ -47,6 +46,8 @@ namespace ReFined.KH2.Functions
 
         static bool LOADED_SETTINGS;
 
+        static DateTime START_DELAY;
+        static bool DELAY_ULTRAWIDE = false;
         static int POSITIVE_OFFSET = 0x55;
         static int NEGATIVE_OFFSET = -0x55;
 
@@ -78,7 +79,6 @@ namespace ReFined.KH2.Functions
 
         public static void HandleMagicSort()
         {
-            var _inputRead = Hypervisor.Read<ushort>(Variables.ADDR_Input);
             var _menuPointer = Hypervisor.Read<ulong>(Variables.PINT_ChildMenu);
 
             var _magicOne = Hypervisor.Read<uint>(Variables.ADDR_MagicLV1);
@@ -146,8 +146,8 @@ namespace ReFined.KH2.Functions
                     var _magicIndex = Hypervisor.Read<byte>(Variables.ADDR_MagicIndex);
                     var _magicMax = Hypervisor.Read<byte>(_menuPointer + 0x10, true);
 
-                    var _inputCheck = (_inputRead & 0x0110) == 0x0110 ? 0x01 : (_inputRead & 0x0140) == 0x0140 ? 0x02 : 0x00;
-                    var _triggerCheck = (_inputRead & 0x0100) == 0x0100;
+                    var _inputCheck = Variables.IS_PRESSED(Variables.BUTTON.L2 | Variables.BUTTON.UP) ? 0x01 : (Variables.IS_PRESSED(Variables.BUTTON.L2 | Variables.BUTTON.DOWN) ? 0x02 : 0x00);
+                    var _triggerCheck = Variables.IS_PRESSED(Variables.BUTTON.L2);
 
                     var _insCheck = Hypervisor.Read<byte>(CMD_OFFSET + 0x1B1);
 
@@ -220,14 +220,10 @@ namespace ReFined.KH2.Functions
                 (_worldCheck == 0x12 && _roomCheck >= 0x13 && _roomCheck <= 0x1D) ||
                 (_worldCheck == 0x02 && _roomCheck <= 0x01);
 
-            if (!Variables.IS_TITLE && Variables.IS_LOADED && !_blacklistCheck)
+            if (!Variables.IS_TITLE && !Variables.IS_CUTSCENE && Variables.IS_LOADED && !_blacklistCheck)
             {
-                var _battleRead = Hypervisor.Read<byte>(Variables.ADDR_BattleFlag);
-                var _cutsceneRead = Hypervisor.Read<byte>(Variables.ADDR_CutsceneFlag);
-
-                var _saveableBool = (Variables.SAVE_MODE != 0x02) && Variables.IS_LOADED &&
-                                    _battleRead == 0x00 &&
-                                    _cutsceneRead == 0x00 &&
+                var _saveableBool = Variables.SAVE_MODE != 0x02 &&
+                                    Variables.BATTLE_MODE == Variables.BATTLE_TYPE.PEACEFUL &&
                                     _worldCheck >= 0x02 &&
                                     _pauseCheck == 0x00 &&
                                     LOCK_AUTOSAVE == false;
@@ -264,7 +260,7 @@ namespace ReFined.KH2.Functions
         public static void HandleIntro()
         {
             var _subAudio = 0x00;
-            var _selectButton = Hypervisor.Read<byte>(0xB1D5E4);
+            var _selectButton = Hypervisor.Read<byte>(Variables.ADDR_TitleSelect);
 
             CONFIG_TOGGLE = _selectButton == 0x00 ? true : false;
 
@@ -591,7 +587,7 @@ namespace ReFined.KH2.Functions
                     while (Hypervisor.Read<byte>(Variables.ADDR_MenuFlag) != 0x01) ;
 
                     Terminal.Log("Killing the background music.", 0);
-                    Variables.SharpHook[OffsetShutMusic].Execute();
+                    Sound.KillBGM();
 
                     Terminal.Log("Copying down the current area state.", 0);
 
@@ -621,7 +617,7 @@ namespace ReFined.KH2.Functions
 
                     // Whilst not loaded, constantly shut off the music.
                     while (!Variables.IS_LOADED)
-                        Variables.SharpHook[OffsetShutMusic].Execute();
+                        Sound.KillBGM();
 
                     Variables.SharpHook[OffsetSetFadeOff].Execute(0x02);
 
@@ -656,87 +652,101 @@ namespace ReFined.KH2.Functions
 
         public static void HandleRatio()
         {
-            var _renderWidth = Hypervisor.Read<float>(Variables.ADDR_RenderResolution);
-            var _renderHeight = Hypervisor.Read<float>(Variables.ADDR_RenderResolution + 0x04);
-
-            if (_renderWidth != 0x00 && _renderHeight != 0x00)
+            if (!DELAY_ULTRAWIDE)
             {
-                var _fetchRatio = (float)Math.Round(_renderWidth / _renderHeight, 2);
+                if (START_DELAY == DateTime.MinValue)
+                    START_DELAY = DateTime.Now;
 
-                Hypervisor.Write(Variables.ADDR_Viewspace3D, _fetchRatio);
+                var _currTime = DateTime.Now;
+                var _currSeconds = (_currTime - START_DELAY).TotalSeconds;
 
-                if (_fetchRatio == 1.6F)
-                    Hypervisor.Write(Variables.ADDR_Viewspace3D + 0x04, 1.15F);
+                if (_currSeconds >= 5)
+                    DELAY_ULTRAWIDE = true;
+            }
 
-                Hypervisor.Write(Variables.ADDR_Viewspace2D, 640F / _fetchRatio);
+            else
+            {
+                var _renderWidth = Hypervisor.Read<float>(Variables.ADDR_RenderResolution);
+                var _renderHeight = Hypervisor.Read<float>(Variables.ADDR_RenderResolution + 0x04);
 
-                POSITIVE_OFFSET = 0x0055;
-                NEGATIVE_OFFSET = -0x0055;
-
-                switch (_fetchRatio)
+                if (_renderWidth != 0x00 && _renderHeight != 0x00)
                 {
-                    case 2.37F:
-                    case 2.38F:
-                    case 2.39F:
-                        POSITIVE_OFFSET = 0x00C3;
-                        NEGATIVE_OFFSET = -0x00C3;
-                        break;
-                    case 3.55F:
-                    case 3.56F:
-                        POSITIVE_OFFSET = 0x01A5;
-                        NEGATIVE_OFFSET = -0x01A5;
-                        break;
+                    var _fetchRatio = (float)Math.Round(_renderWidth / _renderHeight, 2);
+
+                    Hypervisor.Write(Variables.ADDR_Viewspace3D, _fetchRatio - 0.77F);
+
+                    if (_fetchRatio == 1.6F)
+                        Hypervisor.Write(Variables.ADDR_Viewspace3D + 0x04, 1.15F);
+
+                    Hypervisor.Write(Variables.ADDR_Viewspace2D, (640F / (_fetchRatio - 0.77F)));
+               
+
+                    POSITIVE_OFFSET = 0x0055;
+                    NEGATIVE_OFFSET = -0x0055;
+
+                    switch (_fetchRatio)
+                    {
+                        case 2.37F:
+                        case 2.38F:
+                        case 2.39F:
+                            POSITIVE_OFFSET = 0x00C3;
+                            NEGATIVE_OFFSET = -0x00C3;
+                            break;
+                        case 3.55F:
+                        case 3.56F:
+                            POSITIVE_OFFSET = 0x01A5;
+                            NEGATIVE_OFFSET = -0x01A5;
+                            break;
+                    }
+
+                    Hypervisor.Write(0x15E55C, NEGATIVE_OFFSET);
+
+                    Hypervisor.Write(0x17A586, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x17A5C0, POSITIVE_OFFSET);
+
+                    Hypervisor.Write(0x17F2BB, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x17F313, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x17F35A, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x17F37F, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x17F399, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x17F3C9, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x17F3F9, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x17F429, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x17F5E5, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x17F619, POSITIVE_OFFSET);
+
+                    Hypervisor.Write(0x180BBF, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x1819A9, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x18157D, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x1809F8, POSITIVE_OFFSET);
+
+                    Hypervisor.Write(0x180E5A, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x180EFF, POSITIVE_OFFSET);
+
+                    Hypervisor.Write(0x181D89, POSITIVE_OFFSET);
+
+                    Hypervisor.Write(0x182E4C, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x182E86, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x182EB5, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x182EE4, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x182F13, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x182F42, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x183049, POSITIVE_OFFSET);
+
+                    Hypervisor.Write(0x18BA66, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x18B757, NEGATIVE_OFFSET);
+
+                    Hypervisor.Write(0x18C556, POSITIVE_OFFSET);
+                    Hypervisor.Write(0x18C932, NEGATIVE_OFFSET);
+
+                    Hypervisor.Write(0x18CEF6, NEGATIVE_OFFSET);
+                    Hypervisor.Write(0x18D0D7, POSITIVE_OFFSET);
+
+                    Hypervisor.Write(0x18DD06, NEGATIVE_OFFSET);
+                    Hypervisor.Write(0x18DD3A, NEGATIVE_OFFSET);
+
+                    Hypervisor.Write(0x18E58F, NEGATIVE_OFFSET);
                 }
-
-                #if STEAM_RELEASE
-                Hypervisor.Write(0x15E55C, NEGATIVE_OFFSET);
-
-                Hypervisor.Write(0x17A586, POSITIVE_OFFSET);
-                Hypervisor.Write(0x17A5C0, POSITIVE_OFFSET);
-
-                Hypervisor.Write(0x17F2BB, POSITIVE_OFFSET);
-                Hypervisor.Write(0x17F313, POSITIVE_OFFSET);
-                Hypervisor.Write(0x17F35A, POSITIVE_OFFSET);
-                Hypervisor.Write(0x17F37F, POSITIVE_OFFSET);
-                Hypervisor.Write(0x17F399, POSITIVE_OFFSET);
-                Hypervisor.Write(0x17F3C9, POSITIVE_OFFSET);
-                Hypervisor.Write(0x17F3F9, POSITIVE_OFFSET);
-                Hypervisor.Write(0x17F429, POSITIVE_OFFSET);
-                Hypervisor.Write(0x17F5E5, POSITIVE_OFFSET);
-                Hypervisor.Write(0x17F619, POSITIVE_OFFSET);
-
-                Hypervisor.Write(0x180BBF, POSITIVE_OFFSET);
-                Hypervisor.Write(0x1819A9, POSITIVE_OFFSET);
-                Hypervisor.Write(0x18157D, POSITIVE_OFFSET);
-                Hypervisor.Write(0x1809F8, POSITIVE_OFFSET);
-
-                Hypervisor.Write(0x180E5A, POSITIVE_OFFSET);
-                Hypervisor.Write(0x180EFF, POSITIVE_OFFSET);
-
-                Hypervisor.Write(0x181D89, POSITIVE_OFFSET);
-
-                Hypervisor.Write(0x182E4C, POSITIVE_OFFSET);
-                Hypervisor.Write(0x182E86, POSITIVE_OFFSET);
-                Hypervisor.Write(0x182EB5, POSITIVE_OFFSET);
-                Hypervisor.Write(0x182EE4, POSITIVE_OFFSET);
-                Hypervisor.Write(0x182F13, POSITIVE_OFFSET);
-                Hypervisor.Write(0x182F42, POSITIVE_OFFSET);
-                Hypervisor.Write(0x183049, POSITIVE_OFFSET);
-
-                Hypervisor.Write(0x18BA66, POSITIVE_OFFSET);
-                Hypervisor.Write(0x18B757, NEGATIVE_OFFSET);
-
-                Hypervisor.Write(0x18C556, POSITIVE_OFFSET);
-                Hypervisor.Write(0x18C932, NEGATIVE_OFFSET);
-
-                Hypervisor.Write(0x18CEF6, NEGATIVE_OFFSET);
-                Hypervisor.Write(0x18D0D7, POSITIVE_OFFSET);
-
-                Hypervisor.Write(0x18DD06, NEGATIVE_OFFSET);
-                Hypervisor.Write(0x18DD3A, NEGATIVE_OFFSET);
-
-                Hypervisor.Write(0x18E58F, NEGATIVE_OFFSET);
-                #endif
             }
         }
 
@@ -752,8 +762,6 @@ namespace ReFined.KH2.Functions
             var _finishRead = Hypervisor.Read<byte>(Variables.ADDR_FinishFlag);
 
             var _pauseRead = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag);
-            var _battleRead = Hypervisor.Read<byte>(Variables.ADDR_BattleFlag);
-            var _cutsceneRead = Hypervisor.Read<byte>(Variables.ADDR_CutsceneFlag);
 
             var _worldRead = Hypervisor.Read<byte>(Variables.ADDR_Area);
             var _roomRead = Hypervisor.Read<byte>(Variables.ADDR_Area + 0x01);
@@ -787,11 +795,12 @@ namespace ReFined.KH2.Functions
 
                 RETRY_MODE = 0x00;
                 HADES_COUNT = 0x00;
+                RETRY_HOLD = false;
             }
 
             if (!_blacklistCheck && !Variables.IS_TITLE)
             {
-                var _battleState = _battleRead == 0x02 && _cutsceneRead == 0x00;
+                var _battleState = Variables.BATTLE_MODE == Variables.BATTLE_TYPE.BOSS && !Variables.IS_CUTSCENE;
 
                 if (RETRY_BLOCK)
                 {
@@ -820,7 +829,7 @@ namespace ReFined.KH2.Functions
                     Variables.CONTINUE_MENU.Children.Insert(_insertIndex, _entRetry);
                 }
 
-                else if (!_battleState && _pauseRead == 0x00 && STATE_COPIED && !(_isEscape && _battleRead == 0x01) && RETRY_MODE == 0x00)
+                else if (!_battleState && _pauseRead == 0x00 && STATE_COPIED && !(_isEscape && Variables.BATTLE_MODE == Variables.BATTLE_TYPE.FIELD) && RETRY_MODE == 0x00)
                 {
                     Terminal.Log("The battle has ended. Savestate has been restored.", 0);
                     Hypervisor.Write(0x7A0000, new byte[0x10FC0]);
@@ -836,19 +845,20 @@ namespace ReFined.KH2.Functions
 
                     STATE_COPIED = false;
                     ROXAS_KEYBLADE = 0x0000;
+                    RETRY_HOLD = false;
                 }
 
-                if (_isEscape && _battleRead == 0x01 && !DEBOUNCE[7])
+                if (_isEscape && Variables.BATTLE_MODE == Variables.BATTLE_TYPE.FIELD && !DEBOUNCE[7])
                 {
                     HADES_COUNT += 1;
                     DEBOUNCE[7] = true;
                     Terminal.Log("Incrementing the clear count for Hades Escape.", 0);
                 }
 
-                if (_isEscape && _battleRead == 0x02 && DEBOUNCE[7])
+                if (_isEscape && Variables.BATTLE_MODE == Variables.BATTLE_TYPE.BOSS && DEBOUNCE[7])
                     DEBOUNCE[7] = false;
                
-                if (_gameOverRead == 0x00 && ((_finishRead == 0x01 || _cutsceneRead != 0x00) && RETRY_MODE != 0x00) || (_isEscape && HADES_COUNT == 3))
+                if (_gameOverRead == 0x00 && ((_finishRead == 0x01 || Variables.IS_CUTSCENE) && RETRY_MODE != 0x00) || (_isEscape && HADES_COUNT == 3))
                 {
                     Terminal.Log("The battle has ended. Disabled functions have been re-enabled.", 0);
 
@@ -862,6 +872,7 @@ namespace ReFined.KH2.Functions
                     Hypervisor.Write(INVT_OFFSET, INVT_FUNCTION);
 
                     RETRY_MODE = 0x00;
+                    RETRY_HOLD = false;
                 }
 
                 if (_gameOverRead != 0x00 && STATE_COPIED)
@@ -871,6 +882,9 @@ namespace ReFined.KH2.Functions
                     var _continueButton = Variables.RETRY_DEFAULT ? 0x02 : 0x00;
 
                     var _buttonCheck = _selectRead == _retryButton || _selectRead == _prepareButton;
+
+                    if (!RETRY_HOLD)
+                        Thread.Sleep(10); // REPLACE WITH SUSPEND!
 
                     if (_isEscape && HADES_COUNT > 0)
                     {
@@ -916,6 +930,12 @@ namespace ReFined.KH2.Functions
                         RETRY_MODE = 0x01;
                         PREPARE_MODE = 0x00;
                     }
+
+                    if (!RETRY_HOLD)
+                    {
+                        Thread.Sleep(10); // REPLACE WITH RESUME!
+                        RETRY_HOLD = true;
+                    }
                 }
 
                 else
@@ -923,7 +943,7 @@ namespace ReFined.KH2.Functions
                     if (PREPARE_MODE == 0x01 && _menuRead != 0x08)
                     {
                         Terminal.Log("Prepare request detected! Opening the Camp Menu...", 0);
-                        Variables.SharpHook[OffsetCampMenu].Execute(BSharpConvention.MicrosoftX64, 0, 0);
+                        Popups.PopupMenu(0, 0);
                     }
 
                     else if (_menuRead == 0x08 && PREPARE_MODE == 0x01)
@@ -943,7 +963,6 @@ namespace ReFined.KH2.Functions
             else if (!RETRY_BLOCK && !Variables.IS_TITLE)
             {
                 Terminal.Log("Blacklisted area have been detected. Retry functionality has been disabled.", 0);
-
                 RETRY_BLOCK = true;
             }
         }
@@ -983,10 +1002,9 @@ namespace ReFined.KH2.Functions
         public static void HandleCrown()
         {
             // Prepare the suffix according to the language.
-            var _fileFormatter = Hypervisor.ReadString(Variables.ADDR_PAXFormatter + 0x10);
+            var _fileFormatter = Hypervisor.ReadString(Variables.DATA_PAXPath + 0x10);
 
             // Read the values.
-            var _cutsceneRead = Hypervisor.Read<byte>(Variables.ADDR_CutsceneFlag);
             var _formRead = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x3524);
 
             // If on the title, or the room ain't loaded, or the form changed: Wipe the cache.
@@ -999,18 +1017,18 @@ namespace ReFined.KH2.Functions
         RELOAD_POINT:
 
             // If not in a cutscene or the Title Screen, and the room is loaded:
-            if (!Variables.IS_TITLE && Variables.IS_LOADED && _cutsceneRead == 0x00)
+            if (!Variables.IS_TITLE && Variables.IS_LOADED && !Variables.IS_CUTSCENE)
             {
                 // Find the .a.xx files in game cache.
                 LOAD_LIST =
                 [
-                    Operations.FindFile(_fileFormatter.Replace("%s", "P_EX100")),
-                    Operations.FindFile(_fileFormatter.Replace("%s", "P_EX100_BTLF")),
-                    Operations.FindFile(_fileFormatter.Replace("%s", "P_EX100_MAGF")),
-                    Operations.FindFile(_fileFormatter.Replace("%s", "P_EX100_KH1F")),
-                    Operations.FindFile(_fileFormatter.Replace("%s", "P_EX100_TRIF")),
-                    Operations.FindFile(_fileFormatter.Replace("%s", "P_EX100_ULTF")),
-                    Operations.FindFile(_fileFormatter.Replace("%s", "P_EX100_HTLF"))
+                    Operations.FetchBufferFile(_fileFormatter.Replace("%s", "P_EX100")),
+                    Operations.FetchBufferFile(_fileFormatter.Replace("%s", "P_EX100_BTLF")),
+                    Operations.FetchBufferFile(_fileFormatter.Replace("%s", "P_EX100_MAGF")),
+                    Operations.FetchBufferFile(_fileFormatter.Replace("%s", "P_EX100_KH1F")),
+                    Operations.FetchBufferFile(_fileFormatter.Replace("%s", "P_EX100_TRIF")),
+                    Operations.FetchBufferFile(_fileFormatter.Replace("%s", "P_EX100_ULTF")),
+                    Operations.FetchBufferFile(_fileFormatter.Replace("%s", "P_EX100_HTLF"))
                 ];
 
                 // Fetch the pointers to the files.

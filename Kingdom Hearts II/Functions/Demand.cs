@@ -1,4 +1,11 @@
-﻿using ReFined.Common;
+﻿using Octokit;
+using System.Net;
+using System.Reflection;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO.Compression;
+
+using ReFined.Common;
 using ReFined.Libraries;
 using ReFined.KH2.InGame;
 using ReFined.KH2.Information;
@@ -22,7 +29,10 @@ namespace ReFined.KH2.Functions
         static byte CURR_SHORTCUT = 0x00;
         static bool SHORTCUT_TOGGLE = false;
 
+        static string LATEST_URL = "";
+        static bool UPDATE_AVAILABLE = false;
         static byte UPDATE_PHASE = 0x00;
+        static bool DOWNLOAD_STARTED = false;
         static bool UPDATE_TRIGGERED = false;
 
         static byte[] MAIN_TEXT = null;
@@ -30,21 +40,18 @@ namespace ReFined.KH2.Functions
         static bool[] DEBOUNCE = new bool[0x20];
 
         static byte[] UPDATE_TEXT = null;
-        static byte[] UPDATE_DONE_TEXT = null;
-          
         static int UPDATE_BAR_INDEX = 0x00;
-        static int UPDATE_PRG_INDEX = 0x00;
+        static byte[] UPDATE_DONE_TEXT = null;
+        static ulong UPDATE_TEXT_ABSOLUTE;
+
 
         public static void TriggerReset()
         {
             var _currentTime = DateTime.Now;
 
-            var _buttonRead = Hypervisor.Read<ushort>(Variables.ADDR_Input);
-            var _confirmRead = Hypervisor.Read<ushort>(Variables.ADDR_Confirm);
-
             var _canReset = !Variables.IS_TITLE && Variables.IS_LOADED;
 
-            if (_buttonRead == Variables.RESET_COMBO && _canReset && !DEBOUNCE[0])
+            if (Variables.IS_PRESSED(Variables.RESET_COMBO) && _canReset && !DEBOUNCE[0])
             {
                 Terminal.Log("Soft Reset requested.", 0);
                 DEBOUNCE[0] = true;
@@ -53,7 +60,7 @@ namespace ReFined.KH2.Functions
                 {
                     Terminal.Log("Soft Reset Prompt enabled. Showing prompt.", 0);
 
-                    InGame.Message.ShowSmallObtained(0x0100);
+                    Popups.PopupPrize(0x0100);
                     var _cancelRequest = false;
 
                     Task.Factory.StartNew(() =>
@@ -62,13 +69,10 @@ namespace ReFined.KH2.Functions
 
                         while ((DateTime.Now - _currentTime) < TimeSpan.FromMilliseconds(2000))
                         {
-                            var _buttonSeek = (_confirmRead == 0x01 ? 0x2000 : 0x4000);
-                            var _buttonSecond = Hypervisor.Read<ushort>(Variables.ADDR_Input);
-
-                            if ((_buttonSecond & _buttonSeek) == _buttonSeek)
+                            if (Variables.IS_PRESSED(Variables.CONFIRM_BUTTON))
                             {
                                 Terminal.Log("Soft Reset interrupted.", 0);
-                                InGame.Message.ShowSmallObtained(0x0101);
+                                Popups.PopupPrize(0x0101);
                                 _cancelRequest = true;
                                 DEBOUNCE[0] = false;
                                 break;
@@ -148,7 +152,7 @@ namespace ReFined.KH2.Functions
                 var _roomCheck = Hypervisor.Read<byte>(Variables.ADDR_Area + 0x01);
                 var _eventCheck = Hypervisor.Read<byte>(Variables.ADDR_Area + 0x04);
 
-                var _cutsceneCheck = Hypervisor.Read<byte>(Variables.ADDR_CutsceneFlag);
+                var _cutsceneMode = Hypervisor.Read<byte>(Variables.ADDR_CutsceneMode);
 
                 if (_worldCheck == 0x02 && _roomCheck == 0x01 && _eventCheck == 0x38 && SKIP_STAGE == 0)
                 {
@@ -162,10 +166,10 @@ namespace ReFined.KH2.Functions
                         Hypervisor.Write(Variables.ADDR_Area + 0x04, 0x01);
                         Hypervisor.Write(Variables.ADDR_Area + 0x08, 0x01);
 
-                        while (Hypervisor.Read<byte>(0xABB3C7) != 0x80) ;
+                        while (Hypervisor.Read<byte>(Variables.ADDR_FadeValue) != 0x80) ;
 
                         Hypervisor.DeleteInstruction((ulong)(Critical.OffsetSetFadeOff + 0x81A), 0x08);
-                        Hypervisor.Write<byte>(0xABB3C7, 0x80);
+                        Hypervisor.Write<byte>(Variables.ADDR_FadeValue, 0x80);
 
                         while (!Variables.IS_LOADED) ;
 
@@ -188,7 +192,7 @@ namespace ReFined.KH2.Functions
                     }
                 }
 
-                else if (_worldCheck == 0x02 && _roomCheck == 0x20 && _eventCheck == 0x01 && _cutsceneCheck == 0x01 && SKIP_STAGE == 1)
+                else if (_worldCheck == 0x02 && _roomCheck == 0x20 && _eventCheck == 0x01 && _cutsceneMode != 0x00 && SKIP_STAGE == 1)
                 {
                     Terminal.Log("Room parameters correct! Skip was initiated! Initiating Roxas Skip's Second Phase...", 0);
 
@@ -655,7 +659,6 @@ namespace ReFined.KH2.Functions
             var _isPaused = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag);
             var _subMenuType = Hypervisor.Read<byte>(Variables.ADDR_SubMenuType);
 
-            var _inputRead = Hypervisor.Read<short>(Variables.ADDR_Input);
             var _currShort = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0xE000);
             var _currForm = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x3524);
 
@@ -663,14 +666,14 @@ namespace ReFined.KH2.Functions
             var _shortFake = Variables.ADDR_SaveData + 0xE100;
 
             if (SORA_MSG_POINT == 0x00)
-                SORA_MSG_POINT = Operations.FetchPointerMSG(Variables.PINT_SystemMSG, 0x051F);
+                SORA_MSG_POINT = Operations.GetStringPointer(Variables.PINT_SystemMSG, 0x051F);
 
             var _isInMainShortcut = _isPaused == 0x01 && _subMenuType == 0x19;
             var _isEditingShortcut = _isPaused == 0x01 && (_subMenuType == 0x1A || _subMenuType == 0x1D || _subMenuType == 0x1E || _subMenuType == 0x1F);
             var _isInShortcut = _isPaused == 0x01 && (_subMenuType == 0x19 || _subMenuType == 0x1A || _subMenuType == 0x1D || _subMenuType == 0x1E || _subMenuType == 0x1F);
 
             if (MAIN_TEXT == null)
-                MAIN_TEXT = Operations.FetchStringMSG(Variables.PINT_SystemMSG, 0x051F);
+                MAIN_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x051F);
 
             if (!Variables.IS_TITLE && !Variables.IS_LITE)
             {
@@ -698,22 +701,22 @@ namespace ReFined.KH2.Functions
                     SORA_TEXT_SWITCH = false;
                 }
 
-                if (_menuType != 0x05 || ((_inputRead & 0x40) == 0x00 && (_inputRead & 0x10) == 0x00))
+                if (_menuType != 0x05 || !Variables.IS_PRESSED(Variables.BUTTON.DOWN) && !Variables.IS_PRESSED(Variables.BUTTON.UP))
                     DEBOUNCE[1] = false;
 
-                if (!_isInMainShortcut || ((_inputRead & 0x0400) == 0x00 && (_inputRead & 0x0800) == 0x00))
+                if (!_isInMainShortcut || !Variables.IS_PRESSED(Variables.BUTTON.L1) && !Variables.IS_PRESSED(Variables.BUTTON.R1))
                     DEBOUNCE[4] = false;
 
-                if (_menuType == 0x05 && !DEBOUNCE[1] && _currForm != 0x03)
+                if (_menuType == 0x05 && !DEBOUNCE[1] && _currForm != 0x03 && _currForm != 0x06)
                 {
-                    if ((_inputRead & 0x40) == 0x40 && !DEBOUNCE[1])
+                    if (Variables.IS_PRESSED(Variables.BUTTON.DOWN) && !DEBOUNCE[1])
                     {
                         Sound.PlaySFX(0x14);
                         CURR_SHORTCUT++;
                         DEBOUNCE[1] = true;
                     }
 
-                    if ((_inputRead & 0x10) == 0x10 && !DEBOUNCE[1])
+                    if (Variables.IS_PRESSED(Variables.BUTTON.UP) && !DEBOUNCE[1])
                     {
                         Sound.PlaySFX(0x14);
                         CURR_SHORTCUT--;
@@ -721,19 +724,28 @@ namespace ReFined.KH2.Functions
                     }
                 }
 
-                if (_isInMainShortcut && !DEBOUNCE[4])
+                if (_isInMainShortcut && !DEBOUNCE[4] && _currForm != 0x03 && _currForm != 0x06)
                 {
-                    if ((_inputRead & 0x0800) == 0x0800 && !DEBOUNCE[4])
+                    if (Variables.IS_PRESSED(Variables.BUTTON.R1) && !DEBOUNCE[4])
                     {
                         Sound.PlaySFX(0x02);
                         CURR_SHORTCUT++;
                         DEBOUNCE[4] = true;
                     }
 
-                    if ((_inputRead & 0x0400) == 0x0400 && !DEBOUNCE[4])
+                    if (Variables.IS_PRESSED(Variables.BUTTON.L1) && !DEBOUNCE[4])
                     {
                         Sound.PlaySFX(0x02);
                         CURR_SHORTCUT--;
+                        DEBOUNCE[4] = true;
+                    }
+                }
+
+                if (_menuType == 0x05 && (_currForm == 0x03 || _currForm == 0x06))
+                {
+                    if ((Variables.IS_PRESSED(Variables.BUTTON.DOWN) || Variables.IS_PRESSED(Variables.BUTTON.UP)) && !DEBOUNCE[1])
+                    {
+                        Sound.PlaySFX(0x05);
                         DEBOUNCE[4] = true;
                     }
                 }
@@ -762,22 +774,49 @@ namespace ReFined.KH2.Functions
                         Variables.SharpHook[OffsetShortcutUpdate].Execute();
                 }
             }
-        
+
             else if (!Variables.IS_TITLE && Variables.IS_LITE && !SORA_TEXT_SWITCH)
             {
                 Hypervisor.Write(SORA_MSG_POINT, "Sora".ToKHSCII(), true);
                 SORA_TEXT_SWITCH = true;
             }
         }
-    
+
         public static void TriggerUpdate()
         {
-            if (!UPDATE_TRIGGERED)
+            if (LATEST_URL == "")
             {
+                try
+                {
+                    var _gitClient = new GitHubClient(new ProductHeaderValue("ReFined-UpdateAgent"));
+                    var _latestInfo = _gitClient.Repository.Release.GetAll("KH-ReFined", "KH-ReFined").Result[0];
+
+                    var _latestNumber = Convert.ToDouble(_latestInfo.TagName.Substring(1), CultureInfo.InvariantCulture);
+                    var _nameVersion = "[v{0}].exe";
+
+                    var _exeAssembly = Assembly.GetExecutingAssembly();
+
+                    if (_latestNumber > Variables.VERSION)
+                        UPDATE_AVAILABLE = true;
+
+                    LATEST_URL = _latestInfo.Assets.FirstOrDefault(x => x.Name.Contains(Variables.PLATFORM)).BrowserDownloadUrl;
+                }
+
+                catch (Exception EX)
+                {
+                    LATEST_URL = "NONE";
+                }
+            }
+
+            if (!UPDATE_TRIGGERED && UPDATE_AVAILABLE)
+            {
+                var _downPath = Path.GetTempPath() + "reFinedUpdate.zip";
+                var _exePath = Assembly.GetExecutingAssembly().Location;
+
                 var _isPaused = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag) == 0x01 ? true : false;
                 var _menuType = Hypervisor.Read<byte>(Variables.ADDR_MenuType);
 
-                var _updateTextAbsolute = Operations.FetchPointerMSG(Variables.PINT_SystemMSG, 0x0129);
+                UPDATE_TEXT_ABSOLUTE = Operations.GetStringPointer(Variables.PINT_SystemMSG, 0x0129);
 
                 if (!Variables.IS_TITLE && Variables.IS_LOADED)
                 {
@@ -786,7 +825,7 @@ namespace ReFined.KH2.Functions
                     if (!_isPaused && _menuType != 0x08)
                     {
                         Thread.Sleep(750);
-                        Variables.SharpHook[Critical.OffsetCampMenu].Execute(BSharpConvention.MicrosoftX64, 0, 0);
+                        Popups.PopupMenu(0, 0);
                         Thread.Sleep(750);
                     }
 
@@ -804,25 +843,24 @@ namespace ReFined.KH2.Functions
 
                         if (UPDATE_DONE_TEXT == null)
                         {
-                            UPDATE_DONE_TEXT = Operations.FetchStringMSG(Variables.PINT_SystemMSG, 0x012A);
-                            UPDATE_TEXT = Operations.FetchStringMSG(Variables.PINT_SystemMSG, 0x0129);
+                            UPDATE_DONE_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x012A);
+                            UPDATE_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x0129);
 
                             UPDATE_BAR_INDEX = UPDATE_TEXT.ToList().FetchIndexOf(x => x == 0x87);
-                            UPDATE_PRG_INDEX = UPDATE_TEXT.ToList().FetchIndexOf(x => x == 0x98);
-                           
+
                             var _tempText = new List<byte>();
-                           
+
                             _tempText.AddRange(UPDATE_TEXT.Take(UPDATE_BAR_INDEX));
                             _tempText.AddRange(Enumerable.Repeat((byte)0x6B, 20).ToArray());
                             _tempText.AddRange(UPDATE_TEXT.Skip(UPDATE_BAR_INDEX + 20));
-                           
+
                             UPDATE_TEXT = _tempText.ToArray();
-                            Hypervisor.Write(_updateTextAbsolute, UPDATE_TEXT, true);
+                            Hypervisor.Write(UPDATE_TEXT_ABSOLUTE, UPDATE_TEXT, true);
                         }
 
                         if (UPDATE_PHASE == 0x00)
                         {
-                            var _result = InGame.Message.ShowDialogCamp(0x0128, Variables.DIALOG_TYPE.YES_NO_BUTTON);
+                            var _result = Dialogs.ShowDialogCAMP(0x0128, Dialogs.DIALOG_BUTTONS.YES_NO_BUTTON);
 
                             if (_result)
                                 UPDATE_PHASE = 0x01;
@@ -834,36 +872,75 @@ namespace ReFined.KH2.Functions
                             }
                         }
 
-                        if (UPDATE_PHASE == 0x01)
+                        if (UPDATE_PHASE == 0x01 && !DOWNLOAD_STARTED)
                         {
-                            
-
-                            Variables.SharpHook[InGame.Message.OffsetSetCampWarning].ExecuteJMP(BSharpConvention.MicrosoftX64, 0x0129, 0x0000);
-
-                            for (int i = 0; i < 100; i++)
+                            using (var _client = new WebClient())
                             {
-                                var _downProgress = Math.Floor(i / 5D);
-                                Hypervisor.Write(_updateTextAbsolute + (ulong)UPDATE_BAR_INDEX + (ulong)_downProgress, (byte)0x6A, true);
-                                Hypervisor.Write(_updateTextAbsolute + (uint)UPDATE_PRG_INDEX, i.ToString("000").ToKHSCII(), true);
-                                Thread.Sleep(250);
+                                _client.DownloadProgressChanged += DownloadEvent;
+                                _client.DownloadFileAsync(new Uri(LATEST_URL), _downPath);
+
+                                Variables.SharpHook[Dialogs.FUNC_SETCAMPWARNING].ExecuteJMP(BSharpConvention.MicrosoftX64, 0x0129, 0x0000);
+
+                                DOWNLOAD_STARTED = true;
                             }
-
-                            Hypervisor.Write(_updateTextAbsolute, UPDATE_DONE_TEXT, true);
-
-                            Variables.SharpHook[InGame.Message.OffsetShowCampWarning].Execute();
-                            Variables.SharpHook[InGame.Message.OffsetMenu].Execute(BSharpConvention.MicrosoftX64, 0x04, 0x00);
-                            Variables.SharpHook[InGame.Message.OffsetMenu + 0x40].Execute();
-
-                            UPDATE_PHASE = 0x02;
                         }
 
-                        if (UPDATE_PHASE == 0x02 && (_isConfirming || _isDenying))
+                        if (UPDATE_PHASE == 0x02)
                         {
+                            using (var _zipArch = ZipFile.OpenRead(_downPath))
+                            {
+                                var _entryList = _zipArch.Entries;
+
+                                var _exeBase = AppDomain.CurrentDomain.BaseDirectory;
+                                var _exeName = "KINGDOM HEARTS II FINAL MIX.exe";
+
+                                var _dateStr = DateTime.Now.ToString("dd_MM_yyyy");
+
+                                var _realName = Path.Combine(_exeBase, _exeName);
+                                var _backName = Path.Combine(_exeBase + "/BACKUP_EXE", _exeName).Replace(".exe", "_" + _dateStr + ".exe");
+
+                                if (!Directory.Exists(_exeBase + "BACKUP_EXE/"))
+                                    Directory.CreateDirectory(_exeBase + "BACKUP_EXE/");
+
+                                File.Move(_realName, _backName);
+
+                                foreach (var _file in _entryList)
+                                    if (!File.Exists(Path.Combine(_exeBase, _file.Name)))
+                                        _file.ExtractToFile(_file.Name, true);
+
+                                UPDATE_PHASE = 0x03;
+                            }
+                        }
+
+                        if (UPDATE_PHASE == 0x03 && (_isConfirming || _isDenying))
+                        {
+                            File.Delete(_downPath);
+                            Process.Start(_exePath);
                             UPDATE_TRIGGERED = true;
                             Critical.LOCK_AUTOSAVE = false;
+                            Process.GetCurrentProcess().Kill();
                         }
                     }
                 }
+            }
+        }
+
+        static void DownloadEvent(object sender, DownloadProgressChangedEventArgs e)
+        {
+            var _downProgress = Math.Floor(e.ProgressPercentage / 5D) >= 20 ? 19 : Math.Floor(e.ProgressPercentage / 5D);
+
+            Hypervisor.Write(UPDATE_TEXT_ABSOLUTE + (ulong)UPDATE_BAR_INDEX + (ulong)_downProgress, (byte)0x6A, true);
+            Thread.Sleep(250);
+
+            if (e.ProgressPercentage == 100)
+            {
+                Hypervisor.Write(UPDATE_TEXT_ABSOLUTE, UPDATE_DONE_TEXT, true);
+
+                Variables.SharpHook[Dialogs.FUNC_SHOWCAMPWARNING].Execute();
+                Variables.SharpHook[Dialogs.FUNC_SETMENUMODE].Execute(BSharpConvention.MicrosoftX64, 0x04, 0x00);
+                Variables.SharpHook[Dialogs.FUNC_SETMENUMODE + 0x40].Execute();
+
+                UPDATE_PHASE = 0x02;
             }
         }
     }

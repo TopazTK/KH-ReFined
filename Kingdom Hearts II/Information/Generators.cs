@@ -8,6 +8,8 @@ namespace ReFined.KH2.Information
 {
     public static class Generators
     {
+        public static ulong OffsetSaveSound;
+
         private static IEnumerable<uint> _fetchTable()
         {
             for (var x = 0; ; x++)
@@ -63,6 +65,9 @@ namespace ReFined.KH2.Information
             var _saveInfoStartFILE = 0x1C8;
             var _saveDataStartFILE = 0x19690;
 
+            // Read the world.
+            var _worldRead = Hypervisor.Read<byte>(Variables.ADDR_Area);
+
             // Read the save from RAM.
             var _saveData = Hypervisor.Read<byte>(Variables.ADDR_SaveData, _saveDataLength);
 
@@ -73,8 +78,12 @@ namespace ReFined.KH2.Information
             {
                 Terminal.Log("Main file doesn't have a save! Autosave aborted.", 1);
 
-                if (Variables.SAVE_MODE == 0x00)
-                    InGame.Message.ShowInformation(0x0103);
+                if (Variables.SAVE_MODE == 0x00 && _worldRead != 0x0F)
+                {
+                    Hypervisor.Write<byte>(OffsetSaveSound + 0x029, 0x28);
+                    Popups.PopupInformation(0x0103);
+                    Hypervisor.Write<byte>(OffsetSaveSound + 0x029, 0x22);
+                }
 
                 return;
             }
@@ -159,11 +168,11 @@ namespace ReFined.KH2.Information
             }
             #endregion
 
-            if (Variables.SAVE_MODE == 0x00)
+            if (Variables.SAVE_MODE == 0x00 && _worldRead != 0x0F)
             {
-                Hypervisor.Write<byte>(0x18DE09, 0x28);
-                InGame.Message.ShowInformation(0x0102);
-                Hypervisor.Write<byte>(0x18DE09, 0x22);
+                Hypervisor.Write<byte>(OffsetSaveSound + 0x029, 0x28);
+                Popups.PopupInformation(0x0102);
+                Hypervisor.Write<byte>(OffsetSaveSound + 0x029, 0x22);
             }
         }
     }

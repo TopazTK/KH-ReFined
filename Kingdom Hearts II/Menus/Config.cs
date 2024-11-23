@@ -103,7 +103,7 @@ namespace ReFined.KH2.Menus
         public void Submit(object? sender = null, NotifyCollectionChangedEventArgs e = null)
         {
             if (sender != null)
-                Terminal.Log("Inserting New Entry to Config...", 0);
+                Terminal.Log("Editing Entries of Menu: Config...", 0);
 
             else
                 Terminal.Log("Submitting Menu: Config - " + Children.Count + " Entries detected!", 0);
