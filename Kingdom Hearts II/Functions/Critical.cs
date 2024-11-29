@@ -18,12 +18,17 @@ namespace ReFined.KH2.Functions
         public static ulong WARP_OFFSET;
         public static ulong INVT_OFFSET;
         public static ulong CMD_OFFSET;
+        public static ulong CAMP_OFFSET;
+        public static ulong CAMP_INIT_OFFSET;
 
         public static ulong ICON_OFFSET;
         public static ulong LIST_OFFSET;
         public static ulong EQUIP_OFFSET;
         public static ulong CATEGORY_OFFSET;
         public static ulong FORM_OFFSET;
+
+        public static byte[] CAMP_FUNCTION;
+        public static byte[] CAMP_INIT_FUNCTION;
 
         public static byte[] WARP_FUNCTION;
         public static byte[] INVT_FUNCTION;
@@ -213,6 +218,7 @@ namespace ReFined.KH2.Functions
             var _worldCheck = Hypervisor.Read<byte>(Variables.ADDR_Area);
             var _pauseCheck = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag);
             var _roomCheck = Hypervisor.Read<byte>(Variables.ADDR_Area + 0x01);
+            var _titleCheck = Hypervisor.Read<byte>(Variables.ADDR_TitleSelect);
 
             var _blacklistCheck =
                 (_worldCheck == 0x08 && _roomCheck == 0x03) ||
@@ -220,12 +226,17 @@ namespace ReFined.KH2.Functions
                 (_worldCheck == 0x12 && _roomCheck >= 0x13 && _roomCheck <= 0x1D) ||
                 (_worldCheck == 0x02 && _roomCheck <= 0x01);
 
-            if (!Variables.IS_TITLE && !Variables.IS_CUTSCENE && Variables.IS_LOADED && !_blacklistCheck)
+            if (!Variables.IS_TITLE && Variables.IS_LOADED && !_blacklistCheck)
             {
+                // Re-Check all the parameters, sleep for 10ms.
+                Thread.Sleep(10);
+
                 var _saveableBool = Variables.SAVE_MODE != 0x02 &&
+                                   !Variables.IS_CUTSCENE && Variables.IS_LOADED &&
                                     Variables.BATTLE_MODE == Variables.BATTLE_TYPE.PEACEFUL &&
+                                    _titleCheck < 0x02 &&
                                     _worldCheck >= 0x02 &&
-                                    _pauseCheck == 0x00 &&
+                                    _pauseCheck == 0x01 &&
                                     LOCK_AUTOSAVE == false;
 
                 if (_saveableBool)
@@ -367,6 +378,8 @@ namespace ReFined.KH2.Functions
 
         public static void HandleConfig()
         {
+            // var _layoutPointer = Hypervisor.Read<ulong>(0x9076D0);
+
             var _configSecond = Hypervisor.Read<byte>(Variables.ADDR_Config + 0x02);
             var _configBitwise = Hypervisor.Read<Variables.CONFIG_BITWISE>(Variables.ADDR_Config);
 
@@ -408,7 +421,7 @@ namespace ReFined.KH2.Functions
             else if (Variables.IS_TITLE && LOADED_SETTINGS)
                 LOADED_SETTINGS = false;
 
-            if (_menuRead == 0x24 && _pauseRead == 0x01 && _selectPoint != 0x00)
+            if (_menuRead == 0x24 && _pauseRead == 0x00 && _selectPoint != 0x00)
             {
                 if (_settingsPoint != 0x00 && !DEBOUNCE[6])
                 {
@@ -499,6 +512,42 @@ namespace ReFined.KH2.Functions
 
                 SETTINGS_WRITE = Hypervisor.Read<byte>(_settingsPoint, SETTINGS_READ.Count(), true);
 
+                /*
+                 *
+                 * THIS ENTIRE BLOCK IS JUST FOR THE FUCKING SCROLL BAR!
+                 * 
+                 * This was quite the endavour to get working. Turns out that Square Enix
+                 * decided to do something correctly here and killl the ENTIRE scroll bar
+                 * rather than just hiding it. So I am doing my best here using **black magic**
+                 * to bring it back to life.
+                 * 
+                 * It works quite well, though not 1:1 with the original. Could not be bothered THAT much.
+                 *
+                 */
+
+                /*
+                var _pageIndex = Hypervisor.Read<byte>(_selectPoint + 0x12, true);
+
+                var _pageCount = (Variables.CONFIG_MENU.Children.Count - 0x09);
+                var _pageFactor = 0x18 * _pageCount;
+
+                var _pageOffset = (_pageFactor / _pageCount) * _pageIndex;
+
+                Hypervisor.Write(_layoutPointer + 0x21498 - 0x1D0, 0x64 + _pageOffset, true);
+                Hypervisor.Write(_layoutPointer + 0x2149C - 0x1D0, 0x64 + _pageOffset, true);
+
+                Hypervisor.Write(_layoutPointer + 0x21528 - 0x1D0, 0x64 + _pageOffset, true);
+                Hypervisor.Write(_layoutPointer + 0x2152C - 0x1D0, 0x64 + _pageOffset, true);
+
+                Hypervisor.Write(_layoutPointer + 0x215B8 - 0x1D0, 0x64 - (_pageFactor + 1) + _pageOffset, true);
+                Hypervisor.Write(_layoutPointer + 0x215BC - 0x1D0, 0x64 - (_pageFactor + 1) + _pageOffset, true);
+
+                Hypervisor.Write(_layoutPointer + 0x21568 - 0x1D0, (0xC0 - _pageFactor) * 0.01F, true);
+                Hypervisor.Write(_layoutPointer + 0x2156C - 0x1D0, (0xC0 - _pageFactor) * 0.01F, true);
+                */
+
+                // ======================================================================================= //
+
                 var _fieldCamBit = SETTINGS_WRITE[0x00] == 0x01 ? Variables.CONFIG_BITWISE.FIELD_CAM : Variables.CONFIG_BITWISE.OFF;
                 var _rightStickBit = SETTINGS_WRITE[0x01] == 0x01 ? Variables.CONFIG_BITWISE.RIGHT_STICK : Variables.CONFIG_BITWISE.OFF;
 
@@ -584,7 +633,7 @@ namespace ReFined.KH2.Functions
                     DEBOUNCE[6] = false;
 
                     // Give time for the Menu to close.
-                    while (Hypervisor.Read<byte>(Variables.ADDR_MenuFlag) != 0x01) ;
+                    while (Hypervisor.Read<byte>(Variables.ADDR_MenuFlag) != 0x00) ;
 
                     Terminal.Log("Killing the background music.", 0);
                     Sound.KillBGM();
@@ -699,53 +748,56 @@ namespace ReFined.KH2.Functions
                             break;
                     }
 
-                    Hypervisor.Write(0x15E55C, NEGATIVE_OFFSET);
+                    if (Variables.PLATFORM == "STEAM")
+                    {
+                        Hypervisor.Write(0x15E55C, NEGATIVE_OFFSET);
 
-                    Hypervisor.Write(0x17A586, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x17A5C0, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x17A586, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x17A5C0, POSITIVE_OFFSET);
 
-                    Hypervisor.Write(0x17F2BB, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x17F313, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x17F35A, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x17F37F, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x17F399, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x17F3C9, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x17F3F9, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x17F429, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x17F5E5, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x17F619, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x17F2BB, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x17F313, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x17F35A, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x17F37F, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x17F399, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x17F3C9, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x17F3F9, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x17F429, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x17F5E5, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x17F619, POSITIVE_OFFSET);
 
-                    Hypervisor.Write(0x180BBF, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x1819A9, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x18157D, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x1809F8, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x180BBF, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x1819A9, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x18157D, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x1809F8, POSITIVE_OFFSET);
 
-                    Hypervisor.Write(0x180E5A, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x180EFF, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x180E5A, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x180EFF, POSITIVE_OFFSET);
 
-                    Hypervisor.Write(0x181D89, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x181D89, POSITIVE_OFFSET);
 
-                    Hypervisor.Write(0x182E4C, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x182E86, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x182EB5, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x182EE4, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x182F13, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x182F42, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x183049, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x182E4C, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x182E86, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x182EB5, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x182EE4, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x182F13, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x182F42, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x183049, POSITIVE_OFFSET);
 
-                    Hypervisor.Write(0x18BA66, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x18B757, NEGATIVE_OFFSET);
+                        Hypervisor.Write(0x18BA66, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x18B757, NEGATIVE_OFFSET);
 
-                    Hypervisor.Write(0x18C556, POSITIVE_OFFSET);
-                    Hypervisor.Write(0x18C932, NEGATIVE_OFFSET);
+                        Hypervisor.Write(0x18C556, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x18C932, NEGATIVE_OFFSET);
 
-                    Hypervisor.Write(0x18CEF6, NEGATIVE_OFFSET);
-                    Hypervisor.Write(0x18D0D7, POSITIVE_OFFSET);
+                        Hypervisor.Write(0x18CEF6, NEGATIVE_OFFSET);
+                        Hypervisor.Write(0x18D0D7, POSITIVE_OFFSET);
 
-                    Hypervisor.Write(0x18DD06, NEGATIVE_OFFSET);
-                    Hypervisor.Write(0x18DD3A, NEGATIVE_OFFSET);
+                        Hypervisor.Write(0x18DD06, NEGATIVE_OFFSET);
+                        Hypervisor.Write(0x18DD3A, NEGATIVE_OFFSET);
 
-                    Hypervisor.Write(0x18E58F, NEGATIVE_OFFSET);
+                        Hypervisor.Write(0x18E58F, NEGATIVE_OFFSET);
+                    }
                 }
             }
         }
@@ -808,7 +860,7 @@ namespace ReFined.KH2.Functions
                     RETRY_BLOCK = false;
                 }
 
-                if (_battleState && _pauseRead == 0x00 && !STATE_COPIED)
+                if (_battleState && _pauseRead == 0x01 && !STATE_COPIED)
                 {
                     Terminal.Log("A forced battle was started. Savestate was copied to memory.", 0);
 
@@ -829,7 +881,7 @@ namespace ReFined.KH2.Functions
                     Variables.CONTINUE_MENU.Children.Insert(_insertIndex, _entRetry);
                 }
 
-                else if (!_battleState && _pauseRead == 0x00 && STATE_COPIED && !(_isEscape && Variables.BATTLE_MODE == Variables.BATTLE_TYPE.FIELD) && RETRY_MODE == 0x00)
+                else if (!_battleState && _pauseRead == 0x01 && STATE_COPIED && !(_isEscape && Variables.BATTLE_MODE == Variables.BATTLE_TYPE.FIELD) && RETRY_MODE == 0x00)
                 {
                     Terminal.Log("The battle has ended. Savestate has been restored.", 0);
                     Hypervisor.Write(0x7A0000, new byte[0x10FC0]);
@@ -867,6 +919,17 @@ namespace ReFined.KH2.Functions
                         HADES_COUNT = 255;
                         Terminal.Log("The battle ended on a special edge-case.", 0);
                     }
+
+                    Hypervisor.Write(WARP_OFFSET, WARP_FUNCTION);
+                    Hypervisor.Write(INVT_OFFSET, INVT_FUNCTION);
+
+                    RETRY_MODE = 0x00;
+                    RETRY_HOLD = false;
+                }
+
+                if (_gameOverRead == 0x00 && Variables.IS_EVENT && RETRY_MODE != 0x00)
+                {
+                    Terminal.Log("After-Retry detected! Restoring functions just-in-case.", 0);
 
                     Hypervisor.Write(WARP_OFFSET, WARP_FUNCTION);
                     Hypervisor.Write(INVT_OFFSET, INVT_FUNCTION);
@@ -940,9 +1003,22 @@ namespace ReFined.KH2.Functions
 
                 else
                 {
+                    ulong _initOffset = Variables.PLATFORM == "STEAM" ? 0x517U : 0x4D7U;
+
                     if (PREPARE_MODE == 0x01 && _menuRead != 0x08)
                     {
                         Terminal.Log("Prepare request detected! Opening the Camp Menu...", 0);
+
+                        Hypervisor.DeleteInstruction(CAMP_OFFSET + 0x1A7, 0x07);
+                        Hypervisor.DeleteInstruction(CAMP_INIT_OFFSET + _initOffset, 0x08);
+
+                        var _campBitwise = Variables.CAMP_BITWISE.ITEMS | 
+                                           Variables.CAMP_BITWISE.ABILITIES | 
+                                           Variables.CAMP_BITWISE.CUSTOMIZE | 
+                                           Variables.CAMP_BITWISE.PARTY;
+
+                        Hypervisor.Write(Variables.ADDR_CampBitwise, _campBitwise);
+
                         Popups.PopupMenu(0, 0);
                     }
 
@@ -953,6 +1029,8 @@ namespace ReFined.KH2.Functions
                     {
                         Terminal.Log("Prepare finished! Copying the save state...", 0);
                         var _currentSave = Hypervisor.Read<byte>(Variables.ADDR_SaveData, 0x10FC0);
+                        Hypervisor.Write(CAMP_OFFSET + 0x1A7, CAMP_FUNCTION);
+                        Hypervisor.Write(CAMP_INIT_OFFSET + _initOffset, CAMP_INIT_FUNCTION);
                         Hypervisor.Write(0x7A0000, _currentSave);
                         PREPARE_MODE = 0x03;
                     }

@@ -1,12 +1,14 @@
-﻿using ReFined.Common;
+﻿using System.Diagnostics;
+using System.Windows.Forms;
+
+using Keystone;
+using Binarysharp.MSharp;
+
+using ReFined.Common;
 using ReFined.Libraries;
 using ReFined.KH2.Menus;
 using ReFined.KH2.InGame;
 using ReFined.KH2.Information;
-using System.Windows.Forms;
-
-using Binarysharp.MSharp;
-using Keystone;
 
 namespace ReFined.KH2.Functions
 {
@@ -22,14 +24,40 @@ namespace ReFined.KH2.Functions
             Variables.IS_LITE = Convert.ToBoolean(_configIni.Read("liteMode", "General"));
             Variables.LIMIT_SHORTS = _configIni.Read("limitShortcuts", "Kingdom Hearts II");
             Variables.DISCORD_TOGGLE = Convert.ToBoolean(_configIni.Read("discordRPC", "General"));
+            Variables.AUTOATTACK = Convert.ToBoolean(_configIni.Read("autoAttack", "Accessibility"));
             Variables.RESET_PROMPT = Convert.ToBoolean(_configIni.Read("resetPrompt", "Kingdom Hearts II"));
             Variables.FORM_SHORTCUT = Convert.ToBoolean(_configIni.Read("driveShortcuts", "Kingdom Hearts II"));
             Variables.RETRY_DEFAULT = _configIni.Read("deathPrompt", "Kingdom Hearts II") == "retry" ? true : false;
-            Variables.RESET_COMBO = (Variables.BUTTON)Convert.ToUInt16(_configIni.Read("resetCombo", "General"), 16);
+            
+            var _comboRead = _configIni.Read("resetCombo", "General");
+            var _comboSplit = _comboRead.Replace("[", "").Replace("]", "").Replace(", ", ",").Split(new char[] { ',' });
+
+            for (int i = 0; i < _comboSplit.Length; i++)
+            {
+                Variables.BUTTON _buttonOut;
+                Enum.TryParse(_comboSplit[i], out _buttonOut);
+                Variables.RESET_COMBO |= _buttonOut;
+            }
+
+            var _mareRead = _configIni.Read("mareShortcut", "General");
+            var _mareSplit = _mareRead.Replace("[", "").Replace("]", "").Replace(", ", ",").Split(new char[] { ',' });
+
+            for (int i = 0; i < _mareSplit.Length; i++)
+            {
+                Variables.BUTTON _buttonOut;
+                Enum.TryParse(_mareSplit[i], out _buttonOut);
+                Variables.MARE_SHORTCUT |= _buttonOut;
+            }
+
+            if (Variables.RESET_COMBO == Variables.BUTTON.NONE)
+                Variables.RESET_COMBO = (Variables.BUTTON)0xFFFF;
+
+            if (Variables.MARE_SHORTCUT == Variables.BUTTON.NONE)
+                Variables.MARE_SHORTCUT = Variables.BUTTON.SQUARE;
 
             VERSION_STRING = Variables.IS_LITE ? "Re:Freshed" : "Re:Fined";
 
-            Terminal.Log("Welcome to " + VERSION_STRING + " v1.50", 0);
+            Terminal.Log("Welcome to " + VERSION_STRING + " v" + Variables.VERSION.ToString("0.00"), 0);
             Terminal.Log("Please be patient while " + VERSION_STRING + " initializes.", 0);
 
             if (!File.Exists("keystone.dll") ||
@@ -38,7 +66,7 @@ namespace ReFined.KH2.Functions
                 var _errorBox = MessageBox.Show(String.Format(Variables.ERROR_550, VERSION_STRING), "ERROR #550 - Missing Libraries Detected!", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                 if (_errorBox == DialogResult.OK || _errorBox == DialogResult.Cancel)
-                    Environment.Exit(550);
+                    Process.GetCurrentProcess().Kill();
             }
 
             Terminal.Log("Initializing SharpHook...", 0);
@@ -48,8 +76,6 @@ namespace ReFined.KH2.Functions
             Terminal.Log("Locating Function Signatures...", 0);
 
             Demand.OffsetShortcutUpdate = Hypervisor.FindSignature(Variables.FUNC_ShortcutUpdate);
-
-            Switchers.OffsetResetCM = Hypervisor.FindSignature(Variables.FUNC_ResetCommandMenu);
 
             Popups.FUNC_SHOWPRIZE = Hypervisor.FindSignature(Variables.FUNC_ShowObatined);
             Popups.FUNC_STARTCAMP = Hypervisor.FindSignature(Variables.FUNC_ExecuteCampMenu);
@@ -80,6 +106,8 @@ namespace ReFined.KH2.Functions
             Critical.INVT_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_InventoryReset);
             Critical.WARP_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_WarpContinue);
             Critical.CMD_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_CommandNavigation);
+            Critical.CAMP_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_CampMenuBuild);
+            Critical.CAMP_INIT_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_CampMenuInit) + 0x09;
 
             Critical.ICON_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_ShortcutIconAssign);
             Critical.LIST_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_ShortcutListFilter);
@@ -90,6 +118,10 @@ namespace ReFined.KH2.Functions
 
             Critical.WARP_FUNCTION = Hypervisor.Read<byte>(Critical.WARP_OFFSET, 0x05);
             Critical.INVT_FUNCTION = Hypervisor.Read<byte>(Critical.INVT_OFFSET, 0x07);
+            Critical.CAMP_FUNCTION = Hypervisor.Read<byte>(Critical.CAMP_OFFSET + 0x1A7, 0x07);
+
+            ulong _initOffset = Variables.PLATFORM == "STEAM" ? 0x517U : 0x4D7U;
+            Critical.CAMP_INIT_FUNCTION = Hypervisor.Read<byte>(Critical.CAMP_INIT_OFFSET + _initOffset, 0x08);
 
             var _hotfixSound = (ulong)Hypervisor.FindSignature(Variables.HFIX_VoiceLineCheck);
             Hypervisor.Write<byte>(_hotfixSound + 0x162, [0x31, 0xC0, 0x90, 0x90, 0x90]);
@@ -116,7 +148,7 @@ namespace ReFined.KH2.Functions
                 var _errorBox = MessageBox.Show(String.Format(Variables.ERROR_404, VERSION_STRING), "ERROR #404 - Base Patch Not Found!", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                 if (_errorBox == DialogResult.OK || _errorBox == DialogResult.Cancel)
-                    Environment.Exit(404);
+                    Process.GetCurrentProcess().Kill();
             }
 
             if (Operations.GetFileSize("03system.bin") == 0)
@@ -124,7 +156,7 @@ namespace ReFined.KH2.Functions
                 var _errorBox = MessageBox.Show(String.Format(Variables.ERROR_430, VERSION_STRING), "ERROR #430 - 03SYSTEM.BIN is Corrupt!", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                 if (_errorBox == DialogResult.OK || _errorBox == DialogResult.Cancel)
-                    Environment.Exit(430);
+                    Process.GetCurrentProcess().Kill();
             }
 
             Variables.INTRO_MENU = new Intro();
@@ -146,7 +178,7 @@ namespace ReFined.KH2.Functions
                 var _cfgAudioSub = new Config.Entry(0, 0x012B, [], []);
                 var _cfgAudioMain = new Config.Entry(0, 0x010B, [0x010C], [0x010D]);
 
-                var _intAudioSub = new Intro.Entry(0, 0x013A, 0x0000, [], []);
+                var _intAudioSub = new Intro.Entry(0, 0x0134, 0x0000, [], []);
                 var _intAudioMain = new Intro.Entry(0, 0x0134, 0x0000, [0x010C], [0x010D]);
 
                 _cfgAudioSub.Buttons.AddRange(_entryDE[0]);
@@ -194,7 +226,7 @@ namespace ReFined.KH2.Functions
                 _intAudioSub.Count = (ushort)_intAudioSub.Buttons.Count;
                 _intAudioMain.Count = (ushort)_intAudioMain.Buttons.Count;
 
-                Variables.LOADED_LANGS.RemoveAll(x => x == "");
+                Variables.LOADED_LANGS.RemoveAll(x => String.IsNullOrEmpty(x));
 
                 Terminal.Log("Initializing Extra Options in the menus...", 0);
 
@@ -272,6 +304,7 @@ namespace ReFined.KH2.Functions
                 var _musicActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x0118) == null ? false : true;
                 var _enemyActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x011D) == null ? false : true;
 
+                Demand.TriggerMare();
                 Demand.TriggerReset();
                 Demand.TriggerUpdate();
                 Demand.TriggerShortcut();
@@ -304,6 +337,7 @@ namespace ReFined.KH2.Functions
                     Critical.HandleFormShortcuts();
 
                     Demand.TriggerEncounter();
+                    Demand.TriggerAutoattack();
                     Demand.TriggerPrologueSkip();
                 }
 
@@ -378,7 +412,7 @@ namespace ReFined.KH2.Functions
                     var _errorBox = MessageBox.Show(String.Format(Variables.ERROR_420, VERSION_STRING), "ERROR #420 - Keystone has crashed!", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                     if (_errorBox == DialogResult.OK || _errorBox == DialogResult.Cancel)
-                        Environment.Exit(420);
+                        Process.GetCurrentProcess().Kill();
                 }
 
                 else
@@ -386,7 +420,7 @@ namespace ReFined.KH2.Functions
                     var _errorBox = MessageBox.Show(String.Format(Variables.ERROR_600, VERSION_STRING), "ERROR #600 - Illegal Operation Detected!", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                     if (_errorBox == DialogResult.OK || _errorBox == DialogResult.Cancel)
-                        Environment.Exit(600);
+                        Process.GetCurrentProcess().Kill();
                 }
             }
         }
