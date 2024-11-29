@@ -8,8 +8,6 @@ namespace ReFined.KH2.Functions
 {
     public static class Switchers
     {
-        public static IntPtr OffsetResetCM;
-
         static string WL_SUFF;
         static string US_SUFF;
         static string FM_SUFF;
@@ -19,20 +17,30 @@ namespace ReFined.KH2.Functions
         static byte[] OBJENTRY_READ;
 
         static byte PAST_VLAD = 0x00;
-
+        static byte PAST_TYPE = 0x00;
         public static void SwitchCommand()
         {
-            var _pauseCheck = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag);
             var _checkString = Hypervisor.ReadString(Variables.ADDR_CommandMenu);
             var _vladBit = Hypervisor.Read<byte>(Variables.ADDR_Config + 0x03);
+            var _typeCheck = Hypervisor.Read<byte>(Variables.ADDR_PromptType);
 
-            if (_vladBit == 0x01 && !_checkString.Contains("qd0command"))
+            if (_vladBit == 0x01 && (_typeCheck != PAST_TYPE || !_checkString.Contains("qd0")))
             {
                 Terminal.Log("Toggling the Quadratum Command Menu.", 0x00);
 
-                Hypervisor.WriteString(Variables.ADDR_CommandMenu, "field2d/%s/qd0command.2dd");
-                Hypervisor.WriteString(Variables.ADDR_CommandMenu + 0x20, "qd0command.2dd");
+                if (_typeCheck == 0x01)
+                {
+                    Hypervisor.WriteString(Variables.ADDR_CommandMenu, "field2d/%s/qd0cmdxbox.2dd");
+                    Hypervisor.WriteString(Variables.ADDR_CommandMenu + 0x20, "qd0cmdxbox.2dd");
+                }
 
+                else
+                {
+                    Hypervisor.WriteString(Variables.ADDR_CommandMenu, "field2d/%s/qd0command.2dd");
+                    Hypervisor.WriteString(Variables.ADDR_CommandMenu + 0x20, "qd0command.2dd");
+                }
+
+                PAST_TYPE = _typeCheck;
                 Hypervisor.Write(Variables.ADDR_CommandFlag, 0x02);
             }
 
@@ -63,22 +71,38 @@ namespace ReFined.KH2.Functions
             US_SUFF = "us";
             FM_SUFF = "fm";
 
-            if (Variables.AUDIO_MODE == 0x01)
+            try
             {
-                _audioSuffix = Variables.LOADED_LANGS[0x00].ToLower();
-                _audioFormat = String.Format(_stringPAX, _audioSuffix);
-
-                if (Critical.AUDIO_SUB_ONLY)
+                if (Variables.AUDIO_MODE == 0x01)
                 {
-                     _audioSuffix = Variables.LOADED_LANGS[_audioRead].ToLower();
-                     _audioFormat = String.Format(_stringPAX, _audioSuffix);
+                    _audioSuffix = Variables.LOADED_LANGS[0x00].ToLower();
+                    _audioFormat = String.Format(_stringPAX, _audioSuffix);
+
+                    if (Critical.AUDIO_SUB_ONLY)
+                    {
+                        _audioSuffix = Variables.LOADED_LANGS[_audioRead].ToLower();
+                        _audioFormat = String.Format(_stringPAX, _audioSuffix);
+                    }
+                }
+
+                else if (Variables.AUDIO_MODE == 0x02)
+                {
+                    _audioSuffix = Variables.LOADED_LANGS[_audioRead + 0x01].ToLower();
+                    _audioFormat = String.Format(_stringPAX, _audioSuffix);
                 }
             }
 
-            else if (Variables.AUDIO_MODE == 0x02)
+            catch (IndexOutOfRangeException)
             {
-                _audioSuffix = Variables.LOADED_LANGS[_audioRead + 0x01].ToLower();
+                Terminal.Log("Caught an exception within Multi Audio... Switching to English Audio.", 1);
+                Variables.AUDIO_MODE = 0x00;
+
+                _audioSuffix = "us";
                 _audioFormat = String.Format(_stringPAX, _audioSuffix);
+
+                US_SUFF = "us";
+                FM_SUFF = "fm";
+
             }
 
             if (_paxCheck != _audioFormat)
