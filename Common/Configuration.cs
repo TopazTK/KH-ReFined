@@ -1,5 +1,5 @@
-﻿using ReFined.KH2.Information;
-using ReFined.Libraries;
+﻿using ReFined.Libraries;
+using ReFined.KH2.Information;
 
 namespace ReFined.Common
 {
@@ -14,18 +14,16 @@ namespace ReFined.Common
                     "[General]",
                     "liteMode = false",
                     "discordRPC = true",
-                    "resetCombo = 0x0300",
+                    "resetCombo = [L2, R2]",
+                    "mareShortcut = [SQUARE]",
+                    "",
+                    "[Accessibility]",
+                    "autoAttack = false",
                     "",
                     "[Kingdom Hearts II]",
                     "driveShortcuts = true",
                     "resetPrompt = true",
-                    "",
-                    "# Options: retry, continue",
                     "deathPrompt = retry",
-                    "",
-                    "# Options: sonic, arcanum, raid, ragnarok",
-                    "# Order: [CONFIRM], TRI, SQU, [JUMP]",
-                    "# Duplicates are allowed. All 4 slots must be filled.",
                     "limitShortcuts = [sonic, arcanum, raid, ragnarok]",
                 };
 
@@ -34,6 +32,15 @@ namespace ReFined.Common
 
             else
             {
+                var _readFile = File.ReadAllText("reFined.cfg");
+
+                if (!_readFile.Contains("mareShortcut"))
+                {
+                    File.Delete("reFined.cfg");
+                    Initialize();
+                    return;
+                }
+
                 var _confIni = new INI("reFined.cfg");
                 if (_confIni.KeyExists("debugMode", "General"))
                     Variables.DEV_MODE = Convert.ToBoolean(_confIni.Read("debugMode", "General"));

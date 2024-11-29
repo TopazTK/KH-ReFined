@@ -30,21 +30,46 @@ namespace ReFined.KH2.Functions
         static bool SHORTCUT_TOGGLE = false;
 
         static string LATEST_URL = "";
-        static bool UPDATE_AVAILABLE = false;
         static byte UPDATE_PHASE = 0x00;
+        static bool UPDATE_AVAILABLE = false;
         static bool DOWNLOAD_STARTED = false;
         static bool UPDATE_TRIGGERED = false;
 
         static byte[] MAIN_TEXT = null;
+        static byte[] SORA_TEXT = null;
 
         static bool[] DEBOUNCE = new bool[0x20];
 
         static byte[] UPDATE_TEXT = null;
+        static ulong UPDATE_TEXT_ABSOLUTE;
         static int UPDATE_BAR_INDEX = 0x00;
         static byte[] UPDATE_DONE_TEXT = null;
-        static ulong UPDATE_TEXT_ABSOLUTE;
 
+        public static void TriggerAutoattack()
+        {
+            if (Variables.AUTOATTACK)
+            {
+                var _currAction = Hypervisor.Read<int>(Variables.ADDR_ActionExe);
+                var _subCommand = Hypervisor.Read<ulong>(Variables.PINT_ChildMenu);
+                var _partyLimit = Hypervisor.Read<ulong>(Variables.PINT_PartyLimit);
+                var _currCommand = Hypervisor.Read<byte>(Hypervisor.GetPointer64(Variables.PINT_ChildMenu - 0x08, [0x74]), true);
+                var _firstCommand = Hypervisor.Read<short>(Hypervisor.GetPointer64(Variables.PINT_ChildMenu - 0x08, [0x16]), true);
+                var _mainCommandType = Hypervisor.Read<byte>(Hypervisor.GetPointer64(Variables.PINT_ChildMenu - 0x08, [0x00]), true);
 
+                var _isActionGood = _subCommand == 0x00 && _partyLimit == 0x00 && _currCommand == 0x00;
+                var _isCommandGood = (_firstCommand == 0x0001 || _firstCommand == 0x016D || _firstCommand == 0x0088) && (_mainCommandType == 0x00 || _mainCommandType == 0x06);
+                var _isStatusGood = !Variables.IS_TITLE && !Variables.IS_CUTSCENE && Variables.BATTLE_MODE != Variables.BATTLE_TYPE.PEACEFUL;
+
+                var _autoCheck = Variables.IS_PRESSED(Variables.CONFIRM_BUTTON) && _isActionGood && _isCommandGood && _isStatusGood;
+
+                if (_autoCheck && _currAction == 0x00)
+                    Hypervisor.Write(Variables.ADDR_ActionExe, 0x01);
+
+                else if (!_autoCheck && _currAction == 0x01)
+                    Hypervisor.Write(Variables.ADDR_ActionExe, 0x00);
+            }
+        }
+       
         public static void TriggerReset()
         {
             var _currentTime = DateTime.Now;
@@ -653,7 +678,7 @@ namespace ReFined.KH2.Functions
 
         public static void TriggerShortcut()
         {
-            var _menuPointer = Hypervisor.GetPointer64(0x2A11110);
+            var _menuPointer = Hypervisor.GetPointer64(Variables.PINT_ChildMenu - 0x08);
             var _menuType = Hypervisor.Read<byte>(_menuPointer, true);
 
             var _isPaused = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag);
@@ -668,12 +693,15 @@ namespace ReFined.KH2.Functions
             if (SORA_MSG_POINT == 0x00)
                 SORA_MSG_POINT = Operations.GetStringPointer(Variables.PINT_SystemMSG, 0x051F);
 
-            var _isInMainShortcut = _isPaused == 0x01 && _subMenuType == 0x19;
-            var _isEditingShortcut = _isPaused == 0x01 && (_subMenuType == 0x1A || _subMenuType == 0x1D || _subMenuType == 0x1E || _subMenuType == 0x1F);
-            var _isInShortcut = _isPaused == 0x01 && (_subMenuType == 0x19 || _subMenuType == 0x1A || _subMenuType == 0x1D || _subMenuType == 0x1E || _subMenuType == 0x1F);
+            var _isInMainShortcut = _isPaused == 0x00 && _subMenuType == 0x19;
+            var _isEditingShortcut = _isPaused == 0x00 && (_subMenuType == 0x1A || _subMenuType == 0x1D || _subMenuType == 0x1E || _subMenuType == 0x1F);
+            var _isInShortcut = _isPaused == 0x00 && (_subMenuType == 0x19 || _subMenuType == 0x1A || _subMenuType == 0x1D || _subMenuType == 0x1E || _subMenuType == 0x1F);
 
             if (MAIN_TEXT == null)
+            {
+                SORA_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x012E);
                 MAIN_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x051F);
+            }
 
             if (!Variables.IS_TITLE && !Variables.IS_LITE)
             {
@@ -690,7 +718,7 @@ namespace ReFined.KH2.Functions
 
                 if (!_isInShortcut && !SORA_TEXT_SWITCH)
                 {
-                    Hypervisor.Write(SORA_MSG_POINT, "Sora".ToKHSCII(), true);
+                    Hypervisor.Write(SORA_MSG_POINT, SORA_TEXT, true);
                     SORA_TEXT_SWITCH = true;
                 }
 
@@ -777,7 +805,7 @@ namespace ReFined.KH2.Functions
 
             else if (!Variables.IS_TITLE && Variables.IS_LITE && !SORA_TEXT_SWITCH)
             {
-                Hypervisor.Write(SORA_MSG_POINT, "Sora".ToKHSCII(), true);
+                Hypervisor.Write(SORA_MSG_POINT, SORA_TEXT, true);
                 SORA_TEXT_SWITCH = true;
             }
         }
@@ -813,7 +841,7 @@ namespace ReFined.KH2.Functions
                 var _downPath = Path.GetTempPath() + "reFinedUpdate.zip";
                 var _exePath = Assembly.GetExecutingAssembly().Location;
 
-                var _isPaused = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag) == 0x01 ? true : false;
+                var _isPaused = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag) == 0x00 ? true : false;
                 var _menuType = Hypervisor.Read<byte>(Variables.ADDR_MenuType);
 
                 UPDATE_TEXT_ABSOLUTE = Operations.GetStringPointer(Variables.PINT_SystemMSG, 0x0129);
@@ -921,6 +949,29 @@ namespace ReFined.KH2.Functions
                             Process.GetCurrentProcess().Kill();
                         }
                     }
+                }
+            }
+        }
+
+        public static void TriggerMare()
+        {
+            if (Variables.PLATFORM == "EPIC")
+            {
+                var _isMare = Hypervisor.Read<byte>(Variables.ADDR_Mare);
+
+                var _isMenu = Hypervisor.Read<byte>(Variables.ADDR_MenuFlag);
+                var _typeMenu = Hypervisor.Read<byte>(Variables.ADDR_MenuType);
+
+                var _readInstruction = Hypervisor.Read<byte>(0x103A80 + 0x1C, 0x06);
+
+                var _titleOkay = Variables.IS_TITLE && _isMenu == 0x00;
+                var _menuOkay = !Variables.IS_TITLE && _isMenu == 0x01 && _typeMenu == 0x08;
+
+                if (Variables.IS_PRESSED(Variables.MARE_SHORTCUT) && (_titleOkay || _menuOkay))
+                {
+                    Hypervisor.DeleteInstruction(0x103A80 + 0x1C, 0x06);
+                    Thread.Sleep(10);
+                    Hypervisor.Write(0x103A80 + 0x1C, _readInstruction);
                 }
             }
         }
