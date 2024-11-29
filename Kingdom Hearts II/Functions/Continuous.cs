@@ -60,7 +60,6 @@ namespace ReFined.KH2.Functions
             }
         }
 
-
         public static void ToggleWarpGOA()
         {
             var _flagRead = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x1EF6);
