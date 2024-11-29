@@ -17,7 +17,7 @@ namespace ReFined.Libraries
         [DllImport("kernel32.dll")]
         static extern bool ReadProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, int dwSize, ref int lpNumberOfBytesRead);
 
-        static IntPtr Handle;
+        public static IntPtr Handle;
         public static Process Process;
         public static ulong PureAddress;
         public static ulong MemoryOffset;
@@ -148,6 +148,8 @@ namespace ReFined.Libraries
             if (!Absolute)
                 _address = (IntPtr)(PureAddress + Address);
 
+            UnlockBlock(Address, Absolute: Absolute);
+
             var _dynoMethod = new DynamicMethod("SizeOfType", typeof(int), []);
             ILGenerator _ilGen = _dynoMethod.GetILGenerator();
 
@@ -189,6 +191,8 @@ namespace ReFined.Libraries
 
             if (!Absolute)
                 _address = (IntPtr)(PureAddress + Address);
+
+            UnlockBlock(Address, Absolute: Absolute);
 
             var _dynoMethod = new DynamicMethod("SizeOfType", typeof(int), []);
             ILGenerator _ilGen = _dynoMethod.GetILGenerator();
@@ -241,6 +245,8 @@ namespace ReFined.Libraries
 
             if (Absolute)
                 _address = (IntPtr)(Address);
+
+            UnlockBlock(Address, Absolute: Absolute);
 
             int _inWrite = 0;
 
@@ -391,7 +397,7 @@ namespace ReFined.Libraries
         /// </summary>
         /// <param name="Address">The address of the subject block.</param>
         /// <param name="Absolute">If the address is absolute, false by default.</param>
-        public static void UnlockBlock(ulong Address, bool Absolute = false)
+        public static void UnlockBlock(ulong Address, int Size = 0x100000, bool Absolute = false)
         {
             var _address = (IntPtr)Address;
 
@@ -399,7 +405,7 @@ namespace ReFined.Libraries
                 _address = (IntPtr)(PureAddress + Address);
 
             int _oldProtect = 0;
-            VirtualProtectEx(Handle, _address, 0x100000, 0x40, ref _oldProtect);
+            VirtualProtectEx(Handle, _address, Size, 0x40, ref _oldProtect);
         }
     }
 }
