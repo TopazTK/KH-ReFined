@@ -17,7 +17,7 @@ namespace ReFined.KH2.InGame
 
         public static bool ShowDialogCAMP(short StringID, DIALOG_BUTTONS Buttons)
         {
-            var _isPaused = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag) == 0x01 ? true : false;
+            var _isPaused = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag) == 0x00 ? true : false;
             var _menuType = Hypervisor.Read<byte>(Variables.ADDR_MenuType);
 
             var _returnType = false;

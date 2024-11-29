@@ -1,4 +1,4 @@
-﻿#define STEAM
+﻿#define EPIC
 
 using DiscordRPC;
 using Binarysharp.MSharp;
@@ -16,28 +16,26 @@ namespace ReFined.KH2.Information
         public static bool INITIALIZED = false;
 
         #if STEAM
-
-        public static double VERSION = 1.50;
         public static string PLATFORM = "STEAM";
-
         #elif EPIC
-
-        public static double VERSION = 1.50;
         public static string PLATFORM = "EPIC";
-
         #endif
 
+        public static double VERSION = 2.00;
         public static bool DEV_MODE = false;
+        public static bool AUTOATTACK = false;
         public static bool RESET_PROMPT = true;
         public static bool FORM_SHORTCUT = true;
         public static bool RETRY_DEFAULT = true;
         public static bool DISCORD_TOGGLE = true;
-        public static BUTTON RESET_COMBO = BUTTON.R2 & BUTTON.L2;
 
         public static int SAVE_MODE = 0x00;
         public static int AUDIO_MODE = 0x00;
         public static int SUB_LANGUAGE = 0x00;
         public static bool CONTROLLER_MODE = true;
+
+        public static BUTTON MARE_SHORTCUT = BUTTON.NONE;
+        public static BUTTON RESET_COMBO = BUTTON.NONE;
 
         public static bool ENEMY_VANILLA = true;
         public static bool MUSIC_VANILLA = false;
@@ -64,8 +62,15 @@ namespace ReFined.KH2.Information
         public static bool IS_LOADED =>
             Hypervisor.Read<byte>(ADDR_LoadFlag) == 0x01;
 
+        public static bool IS_EVENT =>
+            Hypervisor.Read<ulong>(PINT_EventInfo) != 0x00 &&
+           (Hypervisor.Read<uint>(Hypervisor.GetPointer64(PINT_EventInfo, [0x04]), true) == 0xCAFEEFAC ||
+            Hypervisor.Read<uint>(Hypervisor.GetPointer64(PINT_EventInfo, [0x04]), true) == 0xEFACCAFE);
+
         public static bool IS_CUTSCENE =>
-            Hypervisor.Read<byte>(ADDR_CutsceneFlag) != 0x00;
+            Hypervisor.Read<ulong>(PINT_EventInfo) != 0x00 &&
+            Hypervisor.Read<uint>(Hypervisor.GetPointer64(PINT_EventInfo, [0x04]), true) != 0xCAFEEFAC &&
+            Hypervisor.Read<uint>(Hypervisor.GetPointer64(PINT_EventInfo, [0x04]), true) != 0xEFACCAFE;
 
         public static bool IS_MOVIE =>
             Hypervisor.Read<byte>(ADDR_MovieFlag) == 0x01;
@@ -163,16 +168,19 @@ namespace ReFined.KH2.Information
 
         // === ADDRESSES === //
 
+        // Steam Menu Array = 5BADB0
+
         #if STEAM
 
         public static ulong ADDR_Area = 0x0717008;
+        public static ulong ADDR_Mare = 0x0000000;
         public static ulong ADDR_Reset = 0x0ABAC5A;
         public static ulong ADDR_Input = 0x0BF3270;
         public static ulong ADDR_Title = 0x07169B4;
         public static ulong ADDR_Config = 0x09ADA54;
         public static ulong ADDR_Confirm = 0x0715382;
         public static ulong ADDR_LoadFlag = 0x09BA8D0;
-        public static ulong ADDR_MenuFlag = 0x0717418;
+        public static ulong ADDR_MenuFlag = 0x09006B0;
         public static ulong ADDR_PlayerHP = 0x2A23598;
         public static ulong ADDR_MenuType = 0x0900724;
         public static ulong ADDR_SaveData = 0x09A98B0;
@@ -180,17 +188,18 @@ namespace ReFined.KH2.Information
         public static ulong ADDR_MagicLV2 = 0x09ACE7F;
         public static ulong ADDR_FadeValue = 0x0ABB3C7;
         public static ulong ADDR_Framerate = 0x071536E;
-        public static ulong ADDR_PauseFlag = 0x09006B0;
+        public static ulong ADDR_PauseFlag = 0x0717418;
         public static ulong ADDR_ActionExe = 0x2A5C996;
         public static ulong ADDR_MovieFlag = 0x2B561E8;
         public static ulong ADDR_IntroMenu = 0x0820200;
-        public static ulong ADDR_CameraMode = 0x0AC1528;
+        public static ulong ADDR_PromptType = 0x0715380;
         public static ulong ADDR_MenuSelect = 0x0902FA0;
         public static ulong ADDR_ReactionID = 0x2A11162;
         public static ulong ADDR_ConfigMenu = 0x0820000;
         public static ulong ADDR_BattleFlag = 0x2A11404;
         public static ulong ADDR_FinishFlag = 0x0ABC66C;
         public static ulong ADDR_MagicIndex = 0x2A1073C;
+        public static ulong ADDR_CampBitwise = 0x0BEEC20;
         public static ulong ADDR_Viewspace2D = 0x08A09B8;
         public static ulong ADDR_Viewspace3D = 0x08A0990;
         public static ulong ADDR_SubMenuType = 0x07435D4;
@@ -199,7 +208,6 @@ namespace ReFined.KH2.Information
         public static ulong ADDR_CommandFlag = 0x071740C;
         public static ulong ADDR_DialogSelect = 0x0902521;
         public static ulong ADDR_CutsceneMode = 0x0B65210;
-        public static ulong ADDR_CutsceneFlag = 0x2A11428;
         public static ulong ADDR_Framelimiter = 0x0ABAC08;
         public static ulong ADDR_ObjentryBase = 0x2A254D0;
         public static ulong ADDR_LimitShortcut = 0x05C9678;
@@ -218,21 +226,24 @@ namespace ReFined.KH2.Information
         public static ulong PINT_SystemMSG = 0x2A11678;
         public static ulong PINT_ChildMenu = 0x2A11118;
         public static ulong PINT_EnemyInfo = 0x2A0CD70;
+        public static ulong PINT_EventInfo = 0x2A11478;
+        public static ulong PINT_PartyLimit = 0x2A24CC0;
         public static ulong PINT_ConfigMenu = 0x0BF0150;
         public static ulong PINT_SaveInformation = 0x079CB10;
         public static ulong PINT_GameOverOptions = 0x2A11360;
         public static ulong PINT_SubMenuOptionSelect = 0x0BEECD8;
 
-        #elif EPIC
+#elif EPIC
 
         public static ulong ADDR_Area = 0x0716DF8;
+        public static ulong ADDR_Mare = 0x079C7FC;
         public static ulong ADDR_Reset = 0x0ABA6DA;
         public static ulong ADDR_Input = 0x29FAE40;
         public static ulong ADDR_Title = 0x07167A4;
         public static ulong ADDR_Config = 0x09AD4D4;
         public static ulong ADDR_Confirm = 0x0714E02;
         public static ulong ADDR_LoadFlag = 0x09BA350;
-        public static ulong ADDR_MenuFlag = 0x0717208;
+        public static ulong ADDR_MenuFlag = 0x0900150;
         public static ulong ADDR_PlayerHP = 0x2A23018;
         public static ulong ADDR_MenuType = 0x09001C4;
         public static ulong ADDR_SaveData = 0x09A9330;
@@ -240,16 +251,18 @@ namespace ReFined.KH2.Information
         public static ulong ADDR_MagicLV2 = 0x09AC8FF;
         public static ulong ADDR_FadeValue = 0x0ABAE47;
         public static ulong ADDR_Framerate = 0x08CBD0A;
-        public static ulong ADDR_PauseFlag = 0x0900150;
+        public static ulong ADDR_PauseFlag = 0x0717208;
         public static ulong ADDR_ActionExe = 0x2A5C416;
         public static ulong ADDR_MovieFlag = 0x2B56028;
         public static ulong ADDR_IntroMenu = 0x0820200;
+        public static ulong ADDR_PromptType = 0x0715380;
         public static ulong ADDR_MenuSelect = 0x0902A40;
         public static ulong ADDR_ReactionID = 0x2A10BE2;
         public static ulong ADDR_ConfigMenu = 0x0820000;
         public static ulong ADDR_BattleFlag = 0x2A10E84;
         public static ulong ADDR_FinishFlag = 0x0ABC0EC;
         public static ulong ADDR_MagicIndex = 0x2A101BC;
+        public static ulong ADDR_CampBitwise = 0x0BEE6A0;
         public static ulong ADDR_Viewspace2D = 0x08A0BE8;
         public static ulong ADDR_Viewspace3D = 0x08A0BC0;
         public static ulong ADDR_SubMenuType = 0x0743354;
@@ -277,12 +290,14 @@ namespace ReFined.KH2.Information
         public static ulong PINT_SystemMSG = 0x2A110F8;
         public static ulong PINT_ChildMenu = 0x2A10B98;
         public static ulong PINT_EnemyInfo = 0x2A0C7F0;
+        public static ulong PINT_EventInfo = 0x2A10EF8;
         public static ulong PINT_ConfigMenu = 0x0BEFBD0;
+        public static ulong PINT_PartyLimit = 0x2A24740;
         public static ulong PINT_SaveInformation = 0x2B0C240;
         public static ulong PINT_GameOverOptions = 0x2A10DE0;
         public static ulong PINT_SubMenuOptionSelect = 0x0BEE758;
 
-        #endif
+#endif
 
         // === DICTIONARIES === //
 
@@ -335,6 +350,8 @@ namespace ReFined.KH2.Information
         public static string HFIX_VoiceLineCheck = "40 55 56 57 41 54 41 55 41 56 41 57 48 8D 6C 24 E0 48 81 EC 20 01 00 00 48 C7 44 24 60 FE FF FF FF 48 89 9C 24 60 01 00 00 48 8B 05 ?? ?? ?? ??";
         public static string HFIX_SaveRecover = "40 55 53 48 8D 6C 24 B1 48 81 EC C8 00 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 3F 48 8B D9 E8 ?? ?? ?? ??";
         public static string HFIX_InfoSound = "48 89 5C 24 18 57 48 81 EC D0 00 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 C0 00 00 00 48 8B DA 48 8B F9";
+        public static string HFIX_CampMenuBuild = "48 8B C4 48 81 EC 88 00 00 00 48 89 58 18 BA 02 00 00 00 48 89 68 F8 48 89 70 F0";
+        public static string HFIX_CampMenuInit = "C3 CC CC CC CC CC CC CC CC 48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 40";
 
         public static string HFIX_ConfigFirst = "40 53 48 83 EC 20 0F B6 D9 48 8B 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 4C 8B 1D ?? ?? ?? ??";
         public static string HFIX_ConfigSecond = "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 41 54 41 55 41 56 41 57 48 81 EC 80 00 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 70 E8 ?? ?? ?? ?? 48 8B 0D ?? ?? ?? ??";
@@ -406,6 +423,18 @@ namespace ReFined.KH2.Information
             RIGHT = 0x0020,
             DOWN = 0x0040,
             LEFT = 0x0080
+        }
+
+        public enum CAMP_BITWISE : byte
+        {
+            ITEMS = 0x01,
+            ABILITIES = 0x02,
+            CUSTOMIZE = 0x04,
+            PARTY = 0x08, 
+            STATUS = 0x10, 
+            JIMINY_JOURNAL = 0x20,
+            ROXAS_JOURNAL = 0x40,
+            CONFIG = 0x80
         }
 
         public enum CONFIG_BITWISE : ushort
