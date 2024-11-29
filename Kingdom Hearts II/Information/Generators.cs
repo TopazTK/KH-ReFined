@@ -39,7 +39,7 @@ namespace ReFined.KH2.Information
 
             return checksum ^ uint.MaxValue;
         }
-
+        
         /// <summary>
         /// Generates and writes the current game state to both RAM and ROM Save Files.
         /// </summary>
@@ -47,7 +47,7 @@ namespace ReFined.KH2.Information
         {
             // Prepare the strings.
             var _saveName = "BISLPM-66675FM-98";
-            var _savePath = Hypervisor.ReadString(Hypervisor.GetPointer64(Variables.PINT_SaveInformation, [0x40]), true) + "\\KHIIFM_WW.png";
+            var _savePath = Hypervisor.ReadString(Hypervisor.GetPointer64(Variables.PINT_SaveInformation, [0x40]), true) + (Variables.PLATFORM == "EPIC" ? "\\KHIIFM.png" : "\\KHIIFM_WW.png");
 
             // Calculate the Unix Date.
             var _currDate = DateTime.Now;
@@ -81,7 +81,9 @@ namespace ReFined.KH2.Information
                 if (Variables.SAVE_MODE == 0x00 && _worldRead != 0x0F)
                 {
                     Hypervisor.Write<byte>(OffsetSaveSound + 0x029, 0x28);
+                    Thread.Sleep(5);
                     Popups.PopupInformation(0x0103);
+                    Thread.Sleep(5);
                     Hypervisor.Write<byte>(OffsetSaveSound + 0x029, 0x22);
                 }
 
@@ -171,7 +173,9 @@ namespace ReFined.KH2.Information
             if (Variables.SAVE_MODE == 0x00 && _worldRead != 0x0F)
             {
                 Hypervisor.Write<byte>(OffsetSaveSound + 0x029, 0x28);
+                Thread.Sleep(5);
                 Popups.PopupInformation(0x0102);
+                Thread.Sleep(5);
                 Hypervisor.Write<byte>(OffsetSaveSound + 0x029, 0x22);
             }
         }
