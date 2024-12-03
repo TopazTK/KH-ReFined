@@ -130,9 +130,11 @@ Thank you for your consideration, all support is appreciated!
 ## Credits
 
 ### All Games
+- **KHOmega** for his countless hours of contributions to Re:Fined overall.
 - **Televo** and **deltaemeraldin** for almost every asset Re:Fined uses.
 - **Denhonator** for his work on Soft Reset, and Volume Mute in the past.
 - **Xeeynamo** for the functions used to calculate the Save Checksum.
+- **Alison** for her work on Enemy Journal Entries.
 - **UtenaSW** and **Ruby-Chan** for the German translation.
 - **Svenchu**, **Mikote11**, and **Abelatox** for the Spanish translation.
 - **blobdash** for the French translation.
