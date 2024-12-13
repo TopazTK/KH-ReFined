@@ -22,11 +22,15 @@ namespace ReFined.KH2.Functions
 
         public static int SKIP_STAGE;
         public static bool SKIP_ROXAS;
+        public static bool ENSURE_ROXAS;
+        public static bool OBSERVE_ROXAS = false;
+
+        public static bool VENDOR_GOTTEN = false;
 
         public static ulong SORA_MSG_POINT;
         public static bool SORA_TEXT_SWITCH = false;
 
-        static byte CURR_SHORTCUT = 0x00;
+        public static byte CURR_SHORTCUT = 0x00;
         static bool SHORTCUT_TOGGLE = false;
 
         static string LATEST_URL = "";
@@ -44,6 +48,9 @@ namespace ReFined.KH2.Functions
         static ulong UPDATE_TEXT_ABSOLUTE;
         static int UPDATE_BAR_INDEX = 0x00;
         static byte[] UPDATE_DONE_TEXT = null;
+
+        static List<Variables.BUTTON> SECRET_EASTER = new List<Variables.BUTTON>();
+        static Variables.BUTTON LAST_PRESSED;
 
         public static void TriggerAutoattack()
         {
@@ -85,7 +92,7 @@ namespace ReFined.KH2.Functions
                 {
                     Terminal.Log("Soft Reset Prompt enabled. Showing prompt.", 0);
 
-                    Popups.PopupPrize(0x0100);
+                    Popups.PopupPrize(0x5700);
                     var _cancelRequest = false;
 
                     Task.Factory.StartNew(() =>
@@ -97,7 +104,7 @@ namespace ReFined.KH2.Functions
                             if (Variables.IS_PRESSED(Variables.CONFIRM_BUTTON))
                             {
                                 Terminal.Log("Soft Reset interrupted.", 0);
-                                Popups.PopupPrize(0x0101);
+                                Popups.PopupPrize(0x5701);
                                 _cancelRequest = true;
                                 DEBOUNCE[0] = false;
                                 break;
@@ -124,10 +131,13 @@ namespace ReFined.KH2.Functions
 
         public static void TriggerEncounter()
         {
+            var _worldRead = Hypervisor.Read<byte>(Variables.ADDR_Area);
+            var _roomRead = Hypervisor.Read<byte>(Variables.ADDR_Area + 0x01);
             var _roomPoint = Hypervisor.Read<ulong>(Variables.PINT_EnemyInfo) + 0x08;
+            var _moogleLevel = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x4C34);
             var _abilityRead = Hypervisor.Read<ushort>(Variables.ADDR_SaveData + 0x2544, 0x60);
 
-            if (!Variables.IS_TITLE && Variables.IS_LOADED && !DEBOUNCE[2] && !_abilityRead.Contains<ushort>(0x80F8) && !_abilityRead.Contains<ushort>(0x00F8))
+            if (!Variables.IS_TITLE && Variables.IS_LOADED && !DEBOUNCE[2] && _moogleLevel >= 0x04 && !_abilityRead.Contains<ushort>(0x80F8) && !_abilityRead.Contains<ushort>(0x00F8))
             {
                 var _fetchIndex = Array.FindIndex(_abilityRead, x => x == 0x0000);
 
@@ -142,8 +152,40 @@ namespace ReFined.KH2.Functions
 
             if (!Variables.IS_LOADED && _abilityRead.Contains<ushort>(0x80F8) && !DEBOUNCE[3] && Critical.AREA_READ == null)
             {
-                Terminal.Log("Enemy data has been cleared!", 0);
+                Terminal.Log("Enemy data has been cleared by Encounter Plus!", 0);
                 Hypervisor.Write(_roomPoint, new byte[0x100], true);
+
+                uint _vendorOffset = _worldRead == 0x05 && _roomRead == 0x08 ? 0x00U :
+                                    (_worldRead == 0x08 && _roomRead == 0x02 ? 0x01U :
+                                    (_worldRead == 0x06 && _roomRead == 0x07 ? 0x02U :
+                                    (_worldRead == 0x07 && _roomRead == 0x01 ? 0x03U :
+                                    (_worldRead == 0x0E && _roomRead == 0x06 ? 0x04U : 0xFF))));
+
+                if (_vendorOffset != 0xFF)
+                {
+                    var _vendorRead = Hypervisor.Read<byte>(Variables.ADDR_VendorMem + _vendorOffset);
+
+                    if (_vendorRead != 0x02 && !VENDOR_GOTTEN)
+                    {
+                        Terminal.Log("Encounter Plus is rolling for Vendor Probability.", 0);
+                        var _randomCheck = new Random().Next(1, 100);
+
+                        if (_randomCheck >= 80)
+                        {
+                            Terminal.Log("Vendor detected in this world! Go get 'em!", 0);
+                            Hypervisor.Write<byte>(Variables.ADDR_VendorMem + _vendorOffset, 0x02);
+
+                            VENDOR_GOTTEN = true;
+                        }
+                    }
+
+                    else
+                        VENDOR_GOTTEN = true;
+                }
+
+                else if (_worldRead == 0x0F)
+                    VENDOR_GOTTEN = false;
+
                 DEBOUNCE[3] = true;
             }
 
@@ -161,7 +203,7 @@ namespace ReFined.KH2.Functions
                 if (_selectButton == 0x01 && SKIP_STAGE == 0)
                 {
                     Terminal.Log("Loaded game detected! Disabling Roxas Skip...", 0);
-                    SKIP_STAGE = 3;
+                    SKIP_STAGE = 4;
                 }
 
                 else if (_selectButton == 0x00 && SKIP_STAGE > 0x00)
@@ -213,7 +255,7 @@ namespace ReFined.KH2.Functions
                     else
                     {
                         Terminal.Log("Room is correct but settings are not! Disabling Roxas Skip...", 0);
-                        SKIP_STAGE = 3;
+                        SKIP_STAGE = 4;
                     }
                 }
 
@@ -668,11 +710,75 @@ namespace ReFined.KH2.Functions
                     Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x36C7, 0x80);
                     Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x36C9, 0x80);
 
-                    Critical.LOCK_AUTOSAVE = false;
+                    ulong _initOffset = Variables.PLATFORM == "STEAM" ? 0x517U : 0x4D7U;
 
-                    Terminal.Log("Roxas Skip has been completed!", 0);
+                    Hypervisor.DeleteInstruction(Critical.CAMP_OFFSET + 0x1A7, 0x07);
+                    Hypervisor.DeleteInstruction(Critical.CAMP_INIT_OFFSET + _initOffset, 0x08);
+
+                    var _campBitwise = Variables.CAMP_BITWISE.ITEMS |
+                                       Variables.CAMP_BITWISE.ABILITIES |
+                                       Variables.CAMP_BITWISE.CUSTOMIZE |
+                                       Variables.CAMP_BITWISE.STATUS |
+                                       Variables.CAMP_BITWISE.PARTY | 
+                                       Variables.CAMP_BITWISE.CONFIG;
+
+                    Hypervisor.Write(Variables.ADDR_CampBitwise, _campBitwise);
+
+                    Critical.LOCK_AUTOSAVE = false;
+                    OBSERVE_ROXAS = true;
+
                     SKIP_STAGE = 2;
                 }
+                
+                else if (_worldCheck == 0x02 && _roomCheck == 0x02 && _cutsceneMode == 0x00 && SKIP_STAGE == 2)
+                {
+                    ulong _initOffset = Variables.PLATFORM == "STEAM" ? 0x517U : 0x4D7U;
+
+                    Hypervisor.Write(Critical.CAMP_OFFSET + 0x1A7, Critical.CAMP_FUNCTION);
+                    Hypervisor.Write(Critical.CAMP_INIT_OFFSET + _initOffset, Critical.CAMP_INIT_FUNCTION);
+
+                    Terminal.Log("Roomchange Detected! Unlocking the Journal Option!", 0);
+                    SKIP_STAGE = 3;
+                }
+
+                if (_worldCheck == 0x02 && OBSERVE_ROXAS && (SKIP_STAGE == 2 || SKIP_STAGE == 3))
+                {
+                    var _readPressed = Hypervisor.Read<Variables.BUTTON>(Variables.ADDR_Input);
+
+                    if (_readPressed != LAST_PRESSED)
+                    {
+                        if (_readPressed != Variables.BUTTON.NONE)
+                        {
+                            SECRET_EASTER.Add(_readPressed);
+
+                            if (SECRET_EASTER.Count > 10)
+                                SECRET_EASTER.RemoveAt(0);
+                        }
+
+                        LAST_PRESSED = _readPressed;
+                    }
+
+                    var _compareKonami = Enumerable.SequenceEqual(SECRET_EASTER, Variables.KONAMI_CODE);
+
+                    if (_compareKonami)
+                    {
+                        Popups.PopupInformation(0x5745);
+
+                        var _readAP = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x24F8);
+
+                        Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x35B0, 0x01);
+                        Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x3603, 0x01);
+
+                        Hypervisor.Write(Variables.ADDR_SaveData + 0x24F8, (byte)(_readAP + 0x02));
+
+                        SECRET_EASTER.Clear();
+                        OBSERVE_ROXAS = false;
+                    }
+
+                }
+
+                else if (_worldCheck != 0x02 && OBSERVE_ROXAS)
+                    OBSERVE_ROXAS = false;
             }
         }
 
@@ -699,7 +805,7 @@ namespace ReFined.KH2.Functions
 
             if (MAIN_TEXT == null)
             {
-                SORA_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x012E);
+                SORA_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x572E);
                 MAIN_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x051F);
             }
 
@@ -784,6 +890,10 @@ namespace ReFined.KH2.Functions
                         CURR_SHORTCUT = 0x00;
                         break;
 
+                    case 0x80:
+                        CURR_SHORTCUT = Hypervisor.Read<byte>(Variables.ADDR_ContData + 0xE000);
+                        break;
+
                     case 0xFF:
                         CURR_SHORTCUT = 0x02;
                         break;
@@ -844,7 +954,7 @@ namespace ReFined.KH2.Functions
                 var _isPaused = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag) == 0x00 ? true : false;
                 var _menuType = Hypervisor.Read<byte>(Variables.ADDR_MenuType);
 
-                UPDATE_TEXT_ABSOLUTE = Operations.GetStringPointer(Variables.PINT_SystemMSG, 0x0129);
+                UPDATE_TEXT_ABSOLUTE = Operations.GetStringPointer(Variables.PINT_SystemMSG, 0x5729);
 
                 if (!Variables.IS_TITLE && Variables.IS_LOADED)
                 {
@@ -864,15 +974,15 @@ namespace ReFined.KH2.Functions
                         var _confirmButton = Hypervisor.Read<byte>(Variables.ADDR_Confirm) == 0x01 ? 0x2000 : 0x4000;
                         var _denyButton = Hypervisor.Read<byte>(Variables.ADDR_Confirm) == 0x01 ? 0x4000 : 0x2000;
 
-                        var _selectRead = Hypervisor.Read<byte>(0x902521);
+                        var _selectRead = Hypervisor.Read<byte>(Variables.ADDR_DialogSelect);
 
                         var _isConfirming = (_inputRead & _confirmButton) == _confirmButton;
                         var _isDenying = (_inputRead & _denyButton) == _denyButton;
 
                         if (UPDATE_DONE_TEXT == null)
                         {
-                            UPDATE_DONE_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x012A);
-                            UPDATE_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x0129);
+                            UPDATE_DONE_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x572A);
+                            UPDATE_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x5729);
 
                             UPDATE_BAR_INDEX = UPDATE_TEXT.ToList().FetchIndexOf(x => x == 0x87);
 
@@ -888,7 +998,7 @@ namespace ReFined.KH2.Functions
 
                         if (UPDATE_PHASE == 0x00)
                         {
-                            var _result = Dialogs.ShowDialogCAMP(0x0128, Dialogs.DIALOG_BUTTONS.YES_NO_BUTTON);
+                            var _result = Dialogs.ShowDialogCAMP(0x5728, Dialogs.DIALOG_BUTTONS.YES_NO_BUTTON);
 
                             if (_result)
                                 UPDATE_PHASE = 0x01;
@@ -907,7 +1017,7 @@ namespace ReFined.KH2.Functions
                                 _client.DownloadProgressChanged += DownloadEvent;
                                 _client.DownloadFileAsync(new Uri(LATEST_URL), _downPath);
 
-                                Variables.SharpHook[Dialogs.FUNC_SETCAMPWARNING].ExecuteJMP(BSharpConvention.MicrosoftX64, 0x0129, 0x0000);
+                                Variables.SharpHook[Dialogs.FUNC_SETCAMPWARNING].ExecuteJMP(BSharpConvention.MicrosoftX64, 0x5729, 0x0000);
 
                                 DOWNLOAD_STARTED = true;
                             }
