@@ -224,11 +224,11 @@ namespace ReFined.KH2.Functions
                 (_worldCheck == 0x08 && _roomCheck == 0x03) ||
                 (_worldCheck == 0x0C && _roomCheck == 0x02) ||
                 (_worldCheck == 0x12 && _roomCheck >= 0x13 && _roomCheck <= 0x1D) ||
-                (_worldCheck == 0x02 && _roomCheck <= 0x01);
+                (_worldCheck == 0x02 && _roomCheck <= 0x01) ||
+                (_worldCheck == 0x04 && _roomCheck == 0x10);
 
             if (!Variables.IS_TITLE && Variables.IS_LOADED && !_blacklistCheck)
             {
-                // Re-Check all the parameters, sleep for 10ms.
                 Thread.Sleep(10);
 
                 var _saveableBool = Variables.SAVE_MODE != 0x02 &&
@@ -302,9 +302,9 @@ namespace ReFined.KH2.Functions
                     var _addonOffset = 0;
                     var _fetchIndex = AUDIO_SUB_ONLY ? Variables.CONFIG_BITWISE.AUDIO_PRIMARY : Variables.CONFIG_BITWISE.AUDIO_SECONDARY;
 
-                    var _audioActive = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x0134) == null ? false : true;
-                    var _musicActive = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x0135) == null ? false : true;
-                    var _enemyActive = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x0136) == null ? false : true;
+                    var _audioActive = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x5734) == null ? false : true;
+                    var _musicActive = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x5735) == null ? false : true;
+                    var _enemyActive = Variables.INTRO_MENU.Children.FirstOrDefault(x => x.Flair == 0x5736) == null ? false : true;
 
                     if (_audioActive)
                     {
@@ -378,7 +378,7 @@ namespace ReFined.KH2.Functions
 
         public static void HandleConfig()
         {
-            // var _layoutPointer = Hypervisor.Read<ulong>(0x9076D0);
+            var _layoutPointer = Hypervisor.Read<ulong>(Variables.PINT_Camp2LD);
 
             var _configSecond = Hypervisor.Read<byte>(Variables.ADDR_Config + 0x02);
             var _configBitwise = Hypervisor.Read<Variables.CONFIG_BITWISE>(Variables.ADDR_Config);
@@ -391,9 +391,9 @@ namespace ReFined.KH2.Functions
             var _settingsPoint = Hypervisor.Read<ulong>(Variables.PINT_ConfigMenu);
             var _difficultyRead = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x2498);
 
-            var _audioActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x010B) == null ? false : true;
-            var _musicActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x0118) == null ? false : true;
-            var _enemyActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x011D) == null ? false : true;
+            var _audioActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x570B) == null ? false : true;
+            var _musicActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x5718) == null ? false : true;
+            var _enemyActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x571D) == null ? false : true;
 
             var _offsetAudio = Convert.ToInt32(_audioActive) + Convert.ToInt32(SUB_CONFIG_ACTIVE);
             var _offsetMusic = Convert.ToInt32(_audioActive) + Convert.ToInt32(_musicActive) + Convert.ToInt32(SUB_CONFIG_ACTIVE);
@@ -525,7 +525,7 @@ namespace ReFined.KH2.Functions
                  *
                  */
 
-                /*
+                
                 var _pageIndex = Hypervisor.Read<byte>(_selectPoint + 0x12, true);
 
                 var _pageCount = (Variables.CONFIG_MENU.Children.Count - 0x09);
@@ -544,7 +544,7 @@ namespace ReFined.KH2.Functions
 
                 Hypervisor.Write(_layoutPointer + 0x21568 - 0x1D0, (0xC0 - _pageFactor) * 0.01F, true);
                 Hypervisor.Write(_layoutPointer + 0x2156C - 0x1D0, (0xC0 - _pageFactor) * 0.01F, true);
-                */
+                
 
                 // ======================================================================================= //
 
@@ -571,11 +571,11 @@ namespace ReFined.KH2.Functions
                 if (SETTINGS_WRITE[0x09 + _offsetEnemy] == 0x02)
                 {
                     _commandBit = Variables.CONFIG_BITWISE.COMMAND_KH2;
-                    Hypervisor.Write(Variables.ADDR_Config + 0x03, 0x01);
+                    Hypervisor.Write<byte>(Variables.ADDR_Config + 0x03, 0x01);
                 }
 
                 else
-                    Hypervisor.Write(Variables.ADDR_Config + 0x03, 0x00);
+                    Hypervisor.Write<byte>(Variables.ADDR_Config + 0x03, 0x00);
 
                 Variables.SAVE_MODE = SETTINGS_WRITE[0x06];
                 Variables.CONTROLLER_MODE = SETTINGS_WRITE[0x07] == 0x00 ? true : false;
@@ -620,10 +620,12 @@ namespace ReFined.KH2.Functions
             else if (_selectPoint == 0x00 && ENTER_CONFIG && SETTINGS_READ != null && SETTINGS_WRITE != null)
             {
                 var _checkAudio = SETTINGS_WRITE[0x09] == SETTINGS_READ[0x09];
+                var _checkSubAudio = SETTINGS_WRITE[0x0A] == SETTINGS_WRITE[0x0A];
                 var _checkMusic = SETTINGS_WRITE[0x09 + _offsetAudio] == SETTINGS_READ[0x09 + _offsetAudio];
                 var _checkEnemy = SETTINGS_WRITE[0x09 + _offsetMusic] == SETTINGS_READ[0x09 + _offsetMusic];
 
-                if (!Variables.IS_LITE && ((!_checkAudio && _audioActive) || (!_checkMusic && _musicActive) || (!_checkEnemy && _enemyActive)))
+
+                if (!Variables.IS_LITE && ((!_checkAudio && _audioActive) || (!_checkMusic && _musicActive) || (!_checkEnemy && _enemyActive) || (SUB_CONFIG_ACTIVE && !_checkSubAudio)))
                 {
                     LOCK_AUTOSAVE = true;
 
@@ -827,7 +829,7 @@ namespace ReFined.KH2.Functions
             var _entPrepare = new Continue.Entry()
             {
                 Opcode = 0x0002,
-                Label = 0x0127,
+                Label = 0x5727,
             };
 
             var _isEscape = _worldRead == 0x06 && _roomRead == 0x05 && _eventRead == 0x6F;
@@ -853,6 +855,7 @@ namespace ReFined.KH2.Functions
             if (!_blacklistCheck && !Variables.IS_TITLE)
             {
                 var _battleState = Variables.BATTLE_MODE == Variables.BATTLE_TYPE.BOSS && !Variables.IS_CUTSCENE;
+                var _hadesComplete = !_isEscape || (_isEscape && (Variables.BATTLE_MODE == Variables.BATTLE_TYPE.FIELD || HADES_COUNT == 3));
 
                 if (RETRY_BLOCK)
                 {
@@ -872,32 +875,13 @@ namespace ReFined.KH2.Functions
                     
                     var _currentSave = Hypervisor.Read<byte>(Variables.ADDR_SaveData, 0x10FC0);
 
-                    Hypervisor.Write(0x7A0000, _currentSave);
+                    Hypervisor.Write(Variables.ADDR_ContData, _currentSave);
                     STATE_COPIED = true;
 
                     var _insertIndex = Variables.RETRY_DEFAULT ? 0 : 1;
 
                     Variables.CONTINUE_MENU.Children.Insert(_insertIndex, _entPrepare);
                     Variables.CONTINUE_MENU.Children.Insert(_insertIndex, _entRetry);
-                }
-
-                else if (!_battleState && _pauseRead == 0x01 && STATE_COPIED && !(_isEscape && Variables.BATTLE_MODE == Variables.BATTLE_TYPE.FIELD) && RETRY_MODE == 0x00)
-                {
-                    Terminal.Log("The battle has ended. Savestate has been restored.", 0);
-                    Hypervisor.Write(0x7A0000, new byte[0x10FC0]);
-
-                    if (RETRY_MODE != 0x00)
-                    {
-                        Hypervisor.Write(WARP_OFFSET, WARP_FUNCTION);
-                        Hypervisor.Write(INVT_OFFSET, INVT_FUNCTION);
-                        RETRY_MODE = 0x00;
-                    }
-
-                    Variables.CONTINUE_MENU = new Continue();
-
-                    STATE_COPIED = false;
-                    ROXAS_KEYBLADE = 0x0000;
-                    RETRY_HOLD = false;
                 }
 
                 if (_isEscape && Variables.BATTLE_MODE == Variables.BATTLE_TYPE.FIELD && !DEBOUNCE[7])
@@ -909,10 +893,11 @@ namespace ReFined.KH2.Functions
 
                 if (_isEscape && Variables.BATTLE_MODE == Variables.BATTLE_TYPE.BOSS && DEBOUNCE[7])
                     DEBOUNCE[7] = false;
-               
-                if (_gameOverRead == 0x00 && ((_finishRead == 0x01 || Variables.IS_CUTSCENE) && RETRY_MODE != 0x00) || (_isEscape && HADES_COUNT == 3))
+
+                if (_gameOverRead == 0x00 && !_battleState && _pauseRead == 0x01 && _hadesComplete && STATE_COPIED && RETRY_MODE == 0x00)
                 {
-                    Terminal.Log("The battle has ended. Disabled functions have been re-enabled.", 0);
+                    Terminal.Log("The battle has ended. Restoring state.", 0);
+                    Hypervisor.Write(Variables.ADDR_ContData, new byte[0x10FC0]);
 
                     if (_isEscape)
                     {
@@ -920,10 +905,10 @@ namespace ReFined.KH2.Functions
                         Terminal.Log("The battle ended on a special edge-case.", 0);
                     }
 
-                    Hypervisor.Write(WARP_OFFSET, WARP_FUNCTION);
-                    Hypervisor.Write(INVT_OFFSET, INVT_FUNCTION);
+                    Variables.CONTINUE_MENU = new Continue();
 
-                    RETRY_MODE = 0x00;
+                    ROXAS_KEYBLADE = 0x0000;
+                    STATE_COPIED = false;
                     RETRY_HOLD = false;
                 }
 
@@ -947,7 +932,7 @@ namespace ReFined.KH2.Functions
                     var _buttonCheck = _selectRead == _retryButton || _selectRead == _prepareButton;
 
                     if (!RETRY_HOLD)
-                        Thread.Sleep(10); // REPLACE WITH SUSPEND!
+                    Thread.Sleep(10); // REPLACE WITH SUSPEND!
 
                     if (_isEscape && HADES_COUNT > 0)
                     {
@@ -966,26 +951,42 @@ namespace ReFined.KH2.Functions
                         PREPARE_MODE = 0x00;
                     }
 
-                    else if (_buttonCheck && RETRY_MODE == 0x00)
+                    else if (_selectRead == _retryButton && RETRY_MODE == 0x00 && _menuRead != 0x05)
                     {
                         Terminal.Log("Switched into Retry, disabling functions.", 0);
 
                         Hypervisor.DeleteInstruction(WARP_OFFSET, 0x05);
-                        Hypervisor.RedirectLEA(INVT_OFFSET, 0x7A0000);
+                        Hypervisor.RedirectLEA(INVT_OFFSET, (uint)Variables.ADDR_ContData);
+
+                        Demand.CURR_SHORTCUT = 0x80;
 
                         RETRY_MODE = 0x01;
+                        PREPARE_MODE = 0x00;
                     }
 
-                    if (_selectRead == _prepareButton && RETRY_MODE != 0x02)
+                    if (_selectRead == _prepareButton && RETRY_MODE != 0x02 && _menuRead != 0x05)
                     {
-                        var _currentSave = Hypervisor.Read<byte>(0x7A0000, 0x10FC0);
+                        var _currentSave = Hypervisor.Read<byte>(Variables.ADDR_ContData, 0x10FC0);
 
                         Hypervisor.Write(Variables.ADDR_SaveData, _currentSave);
 
                         RETRY_MODE = 0x02;
                         PREPARE_MODE = 0x01;
 
+                        Demand.CURR_SHORTCUT = 0x80;
+
                         Terminal.Log("Prepare and Retry is ready to execute.", 0);
+                    }
+
+                    if (_subMenuRead == 0x0C && RETRY_MODE != 0x00)
+                    {
+                        Terminal.Log("Load Game detected! Enabling functions!", 0);
+
+                        Hypervisor.Write(WARP_OFFSET, WARP_FUNCTION);
+                        Hypervisor.Write(INVT_OFFSET, INVT_FUNCTION);
+
+                        RETRY_MODE = 0x00;
+                        PREPARE_MODE = 0x00;
                     }
 
                     else if (_selectRead == _retryButton && RETRY_MODE == 0x02)
@@ -993,7 +994,7 @@ namespace ReFined.KH2.Functions
                         RETRY_MODE = 0x01;
                         PREPARE_MODE = 0x00;
                     }
-
+                   
                     if (!RETRY_HOLD)
                     {
                         Thread.Sleep(10); // REPLACE WITH RESUME!
@@ -1031,7 +1032,7 @@ namespace ReFined.KH2.Functions
                         var _currentSave = Hypervisor.Read<byte>(Variables.ADDR_SaveData, 0x10FC0);
                         Hypervisor.Write(CAMP_OFFSET + 0x1A7, CAMP_FUNCTION);
                         Hypervisor.Write(CAMP_INIT_OFFSET + _initOffset, CAMP_INIT_FUNCTION);
-                        Hypervisor.Write(0x7A0000, _currentSave);
+                        Hypervisor.Write(Variables.ADDR_ContData, _currentSave);
                         PREPARE_MODE = 0x03;
                     }
                 }
@@ -1079,13 +1080,9 @@ namespace ReFined.KH2.Functions
 
         public static void HandleCrown()
         {
-            // Prepare the suffix according to the language.
             var _fileFormatter = Hypervisor.ReadString(Variables.DATA_PAXPath + 0x10);
-
-            // Read the values.
             var _formRead = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x3524);
 
-            // If on the title, or the room ain't loaded, or the form changed: Wipe the cache.
             if (Variables.IS_TITLE || !Variables.IS_LOADED || PAST_FORM != _formRead)
             {
                 LOAD_LIST = null;
@@ -1094,10 +1091,8 @@ namespace ReFined.KH2.Functions
 
         RELOAD_POINT:
 
-            // If not in a cutscene or the Title Screen, and the room is loaded:
             if (!Variables.IS_TITLE && Variables.IS_LOADED && !Variables.IS_CUTSCENE)
             {
-                // Find the .a.xx files in game cache.
                 LOAD_LIST =
                 [
                     Operations.FetchBufferFile(_fileFormatter.Replace("%s", "P_EX100")),
@@ -1109,7 +1104,6 @@ namespace ReFined.KH2.Functions
                     Operations.FetchBufferFile(_fileFormatter.Replace("%s", "P_EX100_HTLF"))
                 ];
 
-                // Fetch the pointers to the files.
                 var _soraPoints = new ulong[]
                 {
                     LOAD_LIST[0] != Hypervisor.MemoryOffset ? Hypervisor.Read<ulong>(LOAD_LIST[0] + 0x58, true) : 0x00,
@@ -1121,38 +1115,30 @@ namespace ReFined.KH2.Functions
                     LOAD_LIST[6] != Hypervisor.MemoryOffset ? Hypervisor.Read<ulong>(LOAD_LIST[6] + 0x58, true) : 0x00,
                 };
 
-                // Calculate the crown.
                 var _crownRead = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x36B2, 0x03);
                 var _crownSum = _crownRead[0] + _crownRead[1] + _crownRead[2];
 
-                // If something occured whilst reading: Re-fetch everything.
                 if (LOAD_LIST[_formRead] == 0xFFFFFFFFFFFFFFFF || _soraPoints[_formRead] > 0x7FFF00000000)
                 {
                     LOAD_LIST = null;
                     goto RELOAD_POINT;
                 }
 
-                // For every .a.xx found:
                 foreach (var _point in _soraPoints)
                 {
-                    // If the .a.xx file is valid:
                     if (_point != 0x00)
                     {
-                        // Fetch the offsets to the coords.
                         var _barOffset = Hypervisor.Read<uint>(_point + 0x08, true);
                         var _soraOffset = Hypervisor.Read<uint>(_point + 0x38, true) - _barOffset;
 
                         var _faceCheck = Hypervisor.Read<uint>(_point + 0x24, true);
 
-                        // Ensure the .a.xx has a face.
                         if (_faceCheck != 0x65636166)
                             return;
 
-                        // Calculate the positions.
                         var _topValue = 0x00 + _crownSum * 0x5A;
                         var _bottomValue = 0x5D + _crownSum * 0x5A;
 
-                        // Write the positions.
                         for (uint i = 0; i < 3; i++)
                         {
                             Hypervisor.Write(_point + _soraOffset + 0x38 + (0x2C * i), _topValue, true);
