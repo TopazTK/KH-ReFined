@@ -70,10 +70,10 @@ namespace ReFined.KH2.Menus
             var _entCameraH = new Entry(2, 0xC2F6, [0xC2FC, 0xC2FD], [0xC2FE, 0xC2FF]);
             var _entSummonFX = new Entry(3, 0xC2F7, [0xC302, 0xC300, 0xC301], [0xC305, 0xC303, 0xC304]);
             var _entNavigation = new Entry(2, 0xB719, [0xB726, 0xB727], [0xB728, 0xB729]);
-            var _entAutosave = new Entry(3, 0x0104, [0x0105, 0x0107, 0x0109], [0x0106, 0x0108, 0x010A]);
-            var _entController = new Entry(2, 0x0122, [0x0123, 0x0125], [0x0124, 0x0126]);
+            var _entAutosave = new Entry(3, 0x5704, [0x5705, 0x5707, 0x5709], [0x5706, 0x5708, 0x570A]);
+            var _entController = new Entry(2, 0x5722, [0x5723, 0x5725], [0x5724, 0x5726]);
             var _entVibration = new Entry(2, 0xB71A, [0xB72A, 0xB752], [0xB72C, 0xB72D]);
-            var _entCommandKH2 = new Entry(3, 0xB71C, [0xB734, 0xB735, 0x012C], [0xB736, 0xB737, 0x012D]);
+            var _entCommandKH2 = new Entry(3, 0xB71C, [0xB734, 0xB735, 0x572C], [0xB736, 0xB737, 0x572D]);
             var _entDifficulty = new Entry(1, 0xB71D, [0xB738, 0xB739, 0xB73A, 0xCE30], [0xB73B, 0xB73C, 0xB73D, 0xCE31]);
 
             if (Variables.IS_LITE)
@@ -175,7 +175,7 @@ namespace ReFined.KH2.Menus
             Hypervisor.Write(Variables.HFIX_ConfigOffsets[1] + 0x325 + 0x02, _pageFlag);
             Hypervisor.Write(Variables.HFIX_ConfigOffsets[5] + 0x2EF + 0x02, _pageFlag);
 
-            Hypervisor.Write<byte>(0x365545, 0x00);
+            Hypervisor.Write<byte>(Variables.HFIX_ConfigOffsets[6] + 0xE5, 0x00);
 
             if (sender == null)
                 Terminal.Log("Menu has been submitted successfully!", 0);

@@ -82,7 +82,7 @@ namespace ReFined.KH2.Information
                 {
                     Hypervisor.Write<byte>(OffsetSaveSound + 0x029, 0x28);
                     Thread.Sleep(5);
-                    Popups.PopupInformation(0x0103);
+                    Popups.PopupInformation(0x5703);
                     Thread.Sleep(5);
                     Hypervisor.Write<byte>(OffsetSaveSound + 0x029, 0x22);
                 }
@@ -174,7 +174,7 @@ namespace ReFined.KH2.Information
             {
                 Hypervisor.Write<byte>(OffsetSaveSound + 0x029, 0x28);
                 Thread.Sleep(5);
-                Popups.PopupInformation(0x0102);
+                Popups.PopupInformation(0x5702);
                 Thread.Sleep(5);
                 Hypervisor.Write<byte>(OffsetSaveSound + 0x029, 0x22);
             }

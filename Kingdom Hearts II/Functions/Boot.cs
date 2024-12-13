@@ -100,20 +100,21 @@ namespace ReFined.KH2.Functions
             Terminal.Log("Locating Hotfix Signatures...", 0);
 
             Continuous.SAVE_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_SaveRecover);
-            Continuous.LIMITER_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_Framelimiter);
             Continuous.PROMPT_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_ContPrompts);
+            Continuous.LIMITER_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_Framelimiter);
 
-            Critical.INVT_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_InventoryReset);
             Critical.WARP_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_WarpContinue);
-            Critical.CMD_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_CommandNavigation);
             Critical.CAMP_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_CampMenuBuild);
+            Critical.INVT_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_InventoryReset);
+            Critical.CMD_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_CommandNavigation);
             Critical.CAMP_INIT_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_CampMenuInit) + 0x09;
 
+            Critical.FORM_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_FormInventory);
             Critical.ICON_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_ShortcutIconAssign);
             Critical.LIST_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_ShortcutListFilter);
             Critical.EQUIP_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_ShortcutEquipFilter);
             Critical.CATEGORY_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_ShortcutCategoryFilter);
-            Critical.FORM_OFFSET = (ulong)Hypervisor.FindSignature(Variables.HFIX_FormInventory);
+
             Generators.OffsetSaveSound = (ulong)Hypervisor.FindSignature(Variables.HFIX_InfoSound);
 
             Critical.WARP_FUNCTION = Hypervisor.Read<byte>(Critical.WARP_OFFSET, 0x05);
@@ -134,6 +135,7 @@ namespace ReFined.KH2.Functions
             Variables.HFIX_ConfigOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_ConfigFourth));
             Variables.HFIX_ConfigOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_ConfigFifth));
             Variables.HFIX_ConfigOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_ConfigSixth));
+            Variables.HFIX_ConfigOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_ConfigSeventh));
 
             Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroFirst));
             Variables.HFIX_IntroOffsets.Add((ulong)Hypervisor.FindSignature(Variables.HFIX_IntroSecond));
@@ -170,16 +172,16 @@ namespace ReFined.KH2.Functions
                 Variables.LOADED_LANGS.Add(Operations.GetFileSize("voice/es/battle/tt0_sora.win32.scd") != 0x00 ? "ES" : "");
                 Variables.LOADED_LANGS.Add(Operations.GetFileSize("voice/bg/battle/tt0_sora.win32.scd") != 0x00 ? "BG" : "");
 
-                ushort[][] _entryJP = !String.IsNullOrEmpty(Variables.LOADED_LANGS[0]) ? [[0x010E], [0x010F]] : [[], []];
-                ushort[][] _entryDE = !String.IsNullOrEmpty(Variables.LOADED_LANGS[1]) ? [[0x0112], [0x0113]] : [[], []];
-                ushort[][] _entryES = !String.IsNullOrEmpty(Variables.LOADED_LANGS[2]) ? [[0x0110], [0x0111]] : [[], []];
-                ushort[][] _entryFR = !String.IsNullOrEmpty(Variables.LOADED_LANGS[3]) ? [[0x0114], [0x0115]] : [[], []];
+                ushort[][] _entryJP = !String.IsNullOrEmpty(Variables.LOADED_LANGS[0]) ? [[0x570E], [0x570F]] : [[], []];
+                ushort[][] _entryDE = !String.IsNullOrEmpty(Variables.LOADED_LANGS[1]) ? [[0x5712], [0x5713]] : [[], []];
+                ushort[][] _entryES = !String.IsNullOrEmpty(Variables.LOADED_LANGS[2]) ? [[0x5710], [0x5711]] : [[], []];
+                ushort[][] _entryFR = !String.IsNullOrEmpty(Variables.LOADED_LANGS[3]) ? [[0x5714], [0x5715]] : [[], []];
 
-                var _cfgAudioSub = new Config.Entry(0, 0x012B, [], []);
-                var _cfgAudioMain = new Config.Entry(0, 0x010B, [0x010C], [0x010D]);
+                var _cfgAudioSub = new Config.Entry(0, 0x572B, [], []);
+                var _cfgAudioMain = new Config.Entry(0, 0x570B, [0x570C], [0x570D]);
 
-                var _intAudioSub = new Intro.Entry(0, 0x0134, 0x0000, [], []);
-                var _intAudioMain = new Intro.Entry(0, 0x0134, 0x0000, [0x010C], [0x010D]);
+                var _intAudioSub = new Intro.Entry(0, 0x5734, 0x0000, [], []);
+                var _intAudioMain = new Intro.Entry(0, 0x5734, 0x0000, [0x570C], [0x570D]);
 
                 _cfgAudioSub.Buttons.AddRange(_entryDE[0]);
                 _cfgAudioSub.Buttons.AddRange(_entryES[0]);
@@ -211,8 +213,8 @@ namespace ReFined.KH2.Functions
 
                 else if (_cfgAudioSub.Buttons.Count > 0x01)
                 {
-                    _cfgAudioMain.Buttons.Add(0x0116);
-                    _cfgAudioMain.Descriptions.Add(0x0117);
+                    _cfgAudioMain.Buttons.Add(0x5716);
+                    _cfgAudioMain.Descriptions.Add(0x5717);
 
                     if (String.IsNullOrEmpty(Variables.LOADED_LANGS[0]))
                         Critical.AUDIO_SUB_ONLY = true;
@@ -237,8 +239,8 @@ namespace ReFined.KH2.Functions
                 {
                     Terminal.Log("An Enemy Palette Pack was located! Adding the options for it...", 0);
 
-                    var _entConfig = new Config.Entry(2, 0x011D, [0x011E, 0x0120], [0x011F, 0x0121]);
-                    var _entIntro = new Intro.Entry(2, 0x0136, 0x0000, [0x011E, 0x0120], [0x011F, 0x0121]);
+                    var _entConfig = new Config.Entry(2, 0x571D, [0x571E, 0x5720], [0x571F, 0x5721]);
+                    var _entIntro = new Intro.Entry(2, 0x5736, 0x0000, [0x571E, 0x5720], [0x571F, 0x5721]);
 
                     Variables.INTRO_MENU.Children.Insert(4, _entIntro);
                     Variables.CONFIG_MENU.Children.Insert(9, _entConfig);
@@ -248,8 +250,8 @@ namespace ReFined.KH2.Functions
                 {
                     Terminal.Log("A Music Pack was located! Adding the options for it...", 0);
 
-                    var _entConfig = new Config.Entry(2, 0x0118, [0x0119, 0x011B], [0x011A, 0x011C]);
-                    var _entIntro = new Intro.Entry(2, 0x0135, 0x0000, [0x0119, 0x011B], [0x011A, 0x011C]);
+                    var _entConfig = new Config.Entry(2, 0x5718, [0x5719, 0x571B], [0x571A, 0x571C]);
+                    var _entIntro = new Intro.Entry(2, 0x5735, 0x0000, [0x5719, 0x571B], [0x571A, 0x571C]);
 
                     Variables.INTRO_MENU.Children.Insert(4, _entIntro);
                     Variables.CONFIG_MENU.Children.Insert(9, _entConfig);
@@ -272,7 +274,7 @@ namespace ReFined.KH2.Functions
                     Variables.AUDIO_SUB_CONFIG = _cfgAudioSub;
                 }
 
-                var _entRoxas = new Intro.Entry(2, 0x0130, 0x0000, [0x0138, 0x0139], [0x0131, 0x0132]);
+                var _entRoxas = new Intro.Entry(2, 0x5730, 0x0000, [0x5738, 0x5739], [0x5731, 0x5732]);
                 Variables.INTRO_MENU.Children.Add(_entRoxas);
             }
 
@@ -288,6 +290,12 @@ namespace ReFined.KH2.Functions
                 Continuous.LIMIT_SHORT[3] = Variables.DICTIONARY_LMT[_splitArr[3]];
             }
 
+            if (Operations.GetFileSize("Technicolor.bin") != 0x00)
+            {
+                Terminal.Log("Timeless River - Technicolor detected! Disabling Timeless River adjustments.", 1);
+                Variables.TECHNICOLOR = true;
+            }
+
             Variables.Source = new CancellationTokenSource();
             Variables.Token = Variables.Source.Token;
 
@@ -300,14 +308,16 @@ namespace ReFined.KH2.Functions
         {
             try
             {
-                var _audioActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x010B) == null ? false : true;
-                var _musicActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x0118) == null ? false : true;
-                var _enemyActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x011D) == null ? false : true;
+                var _audioActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x570B) == null ? false : true;
+                var _musicActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x5718) == null ? false : true;
+                var _enemyActive = Variables.CONFIG_MENU.Children.FirstOrDefault(x => x.Title == 0x571D) == null ? false : true;
 
                 Demand.TriggerMare();
                 Demand.TriggerReset();
                 Demand.TriggerUpdate();
                 Demand.TriggerShortcut();
+
+                Switchers.SwitchWillie();
 
                 Continuous.ToggleWarpGOA();
                 Continuous.ToggleLimiter();
@@ -352,10 +362,21 @@ namespace ReFined.KH2.Functions
                         {
                             while (!Variables.Token.IsCancellationRequested)
                             {
-                                if (!Critical.LOCK_AUTOSAVE)
-                                    Critical.HandleAutosave();
+                                try
+                                {
+                                    if (!Critical.LOCK_AUTOSAVE)
+                                        Critical.HandleAutosave();
 
-                                Thread.Sleep(5);
+                                    Thread.Sleep(5);
+                                }
+
+                                catch (UnauthorizedAccessException) 
+                                {
+                                    var _errorBox = MessageBox.Show(String.Format(Variables.ERROR_430, VERSION_STRING), "ERROR #403 - The Ethanormous Paradox!", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                                    if (_errorBox == DialogResult.OK || _errorBox == DialogResult.Cancel)
+                                        Process.GetCurrentProcess().Kill();
+                                }
                             }
                         },
 
