@@ -12,12 +12,75 @@ namespace ReFined.KH2.Functions
         static string US_SUFF;
         static string FM_SUFF;
 
+        static bool TOGGLE_WI;
         static bool PAST_MUSIC;
         static bool PAST_ENEMY;
         static byte[] OBJENTRY_READ;
 
         static byte PAST_VLAD = 0x00;
         static byte PAST_TYPE = 0x00;
+
+        public static void SwitchWillie()
+        {
+            var _worldCheck = Hypervisor.Read<byte>(Variables.ADDR_Area);
+
+            if (OBJENTRY_READ == null)
+            {
+                var _headerCheck = Hypervisor.Read<byte>(Variables.ADDR_ObjentryBase);
+                var _itemCount = Hypervisor.Read<int>(Variables.ADDR_ObjentryBase + 0x04);
+
+                if (_headerCheck == 0x03)
+                    OBJENTRY_READ = Hypervisor.Read<byte>(Variables.ADDR_ObjentryBase + 0x08, 0x60 * _itemCount);
+            }
+
+            if (!Variables.TECHNICOLOR)
+            {
+                if (OBJENTRY_READ != null)
+                {
+                    if (Variables.IS_TITLE)
+                        OBJENTRY_READ = null;
+
+                    if (_worldCheck == 0x0D && !TOGGLE_WI)
+                    {
+                        Terminal.Log("Adjusting Elements for Timeless River.", 0);
+
+                        foreach (var _name in Variables.SUMMObjentry)
+                        {
+                            var _fetchSummon = Encoding.Default.GetBytes(_name);
+                            var _searchSummon = OBJENTRY_READ.FindValue(_fetchSummon);
+
+                            if (_searchSummon == 0xFFFFFFFFFFFFFFFF)
+                                break;
+
+                            else
+                                Hypervisor.WriteString(Variables.ADDR_ObjentryBase + 0x08 + _searchSummon, _name.Replace("P_", "X_").Replace("N_", "X_"));
+                        }
+
+                        TOGGLE_WI = true;
+                    }
+
+                    else if (_worldCheck != 0x0D && TOGGLE_WI)
+                    {
+                        Terminal.Log("Adjusting Elements for Colored Worlds.", 0);
+
+                        foreach (var _name in Variables.SUMMObjentry)
+                        {
+                            var _fetchSummon = Encoding.Default.GetBytes(_name.Replace("P_", "X_").Replace("N_", "X_"));
+                            var _searchSummon = OBJENTRY_READ.FindValue(_fetchSummon);
+
+                            if (_searchSummon == 0xFFFFFFFFFFFFFFFF)
+                                break;
+
+                            else
+                                Hypervisor.WriteString(Variables.ADDR_ObjentryBase + 0x08 + _searchSummon, _name);
+                        }
+
+                        TOGGLE_WI = false;
+                    }
+                }
+            }
+        }
+
         public static void SwitchCommand()
         {
             var _checkString = Hypervisor.ReadString(Variables.ADDR_CommandMenu);
@@ -64,6 +127,7 @@ namespace ReFined.KH2.Functions
             var _stringPAX = "obj/%s.a.{0}";
             var _stringEVT = "voice/{0}/event/";
             var _stringBTL = "voice/{0}/battle/";
+            var _stringGMI = "voice/{0}/gumibattle/gumi.win32.scd";
 
             var _audioSuffix = "us";
             var _audioFormat = String.Format(_stringPAX, _audioSuffix);
@@ -118,20 +182,14 @@ namespace ReFined.KH2.Functions
                 Hypervisor.WriteString(Variables.DATA_PAXPath, String.Format(_stringPAX, FM_SUFF));
                 Hypervisor.WriteString(Variables.DATA_PAXPath + 0x10, String.Format(_stringPAX, US_SUFF));
 
-                if (US_SUFF != "jp")
-                {
-                    Hypervisor.WriteString(Variables.DATA_ANBPath, String.Format(_stringANM, "us"));
-                    Hypervisor.WriteString(Variables.DATA_ANBPath + 0x08, String.Format(_stringANM, "fm"));
-                }
-
-                else
-                {
-                    Hypervisor.WriteString(Variables.DATA_ANBPath, String.Format(_stringANM, US_SUFF));
-                    Hypervisor.WriteString(Variables.DATA_ANBPath + 0x08, String.Format(_stringANM, FM_SUFF));
-                }
+                Hypervisor.WriteString(Variables.DATA_ANBPath, String.Format(_stringANM, US_SUFF != "jp" ? "us" : US_SUFF));
+                Hypervisor.WriteString(Variables.DATA_ANBPath + 0x08, String.Format(_stringANM, US_SUFF != "jp" ? "fm" : FM_SUFF));
 
                 Hypervisor.WriteString(Variables.DATA_BTLPath, String.Format(_stringBTL, US_SUFF));
                 Hypervisor.WriteString(Variables.DATA_EVTPath, String.Format(_stringEVT, US_SUFF));
+
+                Hypervisor.WriteString(Variables.DATA_GMIPath, String.Format(_stringGMI, US_SUFF));
+                Hypervisor.WriteString(Variables.DATA_GMIPath + 0x28, String.Format(_stringGMI, US_SUFF));
             }
         }
 

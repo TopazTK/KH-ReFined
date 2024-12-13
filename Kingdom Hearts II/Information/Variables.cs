@@ -1,4 +1,4 @@
-﻿#define EPIC
+﻿#define STEAM
 
 using DiscordRPC;
 using Binarysharp.MSharp;
@@ -22,6 +22,7 @@ namespace ReFined.KH2.Information
         #endif
 
         public static double VERSION = 2.00;
+
         public static bool DEV_MODE = false;
         public static bool AUTOATTACK = false;
         public static bool RESET_PROMPT = true;
@@ -37,6 +38,7 @@ namespace ReFined.KH2.Information
         public static BUTTON MARE_SHORTCUT = BUTTON.NONE;
         public static BUTTON RESET_COMBO = BUTTON.NONE;
 
+        public static bool TECHNICOLOR = false;
         public static bool ENEMY_VANILLA = true;
         public static bool MUSIC_VANILLA = false;
 
@@ -104,8 +106,16 @@ namespace ReFined.KH2.Information
         public static MemorySharp SharpHook;
         public static DiscordRpcClient DiscordClient = new DiscordRpcClient("833511404274974740");
 
+        public static string[] SUMMObjentry =
+        {
+            "P_EX330",
+            "P_EX350",
+            "N_HB040_BTL",
+            "P_AL010"
+        };
+
         public static string[] BOSSObjentry =
-{
+        {
             "B_BB100",
             "B_BB100_GM",
             "B_BB100_TSURU",
@@ -158,6 +168,20 @@ namespace ReFined.KH2.Information
             "M_EX790_HALLOWEEN_NM"
         };
 
+        public static List<BUTTON> KONAMI_CODE = new List<BUTTON>()
+        {
+            BUTTON.UP,
+            BUTTON.UP,
+            BUTTON.DOWN,
+            BUTTON.DOWN,
+            BUTTON.LEFT,
+            BUTTON.RIGHT,
+            BUTTON.LEFT,
+            BUTTON.RIGHT,
+            BUTTON.CROSS,
+            BUTTON.CIRCLE
+        };
+
         // === TASK VARIABLES === //
 
         public static Task DCTask;
@@ -170,7 +194,7 @@ namespace ReFined.KH2.Information
 
         // Steam Menu Array = 5BADB0
 
-        #if STEAM
+#if STEAM
 
         public static ulong ADDR_Area = 0x0717008;
         public static ulong ADDR_Mare = 0x0000000;
@@ -186,12 +210,14 @@ namespace ReFined.KH2.Information
         public static ulong ADDR_SaveData = 0x09A98B0;
         public static ulong ADDR_MagicLV1 = 0x09ACE44;
         public static ulong ADDR_MagicLV2 = 0x09ACE7F;
+        public static ulong ADDR_ContData = 0x07A0000;
         public static ulong ADDR_FadeValue = 0x0ABB3C7;
         public static ulong ADDR_Framerate = 0x071536E;
         public static ulong ADDR_PauseFlag = 0x0717418;
         public static ulong ADDR_ActionExe = 0x2A5C996;
         public static ulong ADDR_MovieFlag = 0x2B561E8;
         public static ulong ADDR_IntroMenu = 0x0820200;
+        public static ulong ADDR_VendorMem = 0x2A25378;
         public static ulong ADDR_PromptType = 0x0715380;
         public static ulong ADDR_MenuSelect = 0x0902FA0;
         public static ulong ADDR_ReactionID = 0x2A11162;
@@ -221,7 +247,9 @@ namespace ReFined.KH2.Information
         public static ulong DATA_ANBPath = 0x05B8FB0;
         public static ulong DATA_EVTPath = 0x05B9020;
         public static ulong DATA_BTLPath = 0x05C5E48;
+        public static ulong DATA_GMIPath = 0x05B5818;
 
+        public static ulong PINT_Camp2LD = 0x09076D0;
         public static ulong PINT_GameOver = 0x0BEF4A8;
         public static ulong PINT_SystemMSG = 0x2A11678;
         public static ulong PINT_ChildMenu = 0x2A11118;
@@ -249,6 +277,7 @@ namespace ReFined.KH2.Information
         public static ulong ADDR_SaveData = 0x09A9330;
         public static ulong ADDR_MagicLV1 = 0x09AC8C4;
         public static ulong ADDR_MagicLV2 = 0x09AC8FF;
+        public static ulong ADDR_ContData = 0x07A0000;
         public static ulong ADDR_FadeValue = 0x0ABAE47;
         public static ulong ADDR_Framerate = 0x08CBD0A;
         public static ulong ADDR_PauseFlag = 0x0717208;
@@ -286,6 +315,7 @@ namespace ReFined.KH2.Information
         public static ulong DATA_EVTPath = 0x05B91B0;
         public static ulong DATA_BTLPath = 0x05C5FB8;
 
+        public static ulong PINT_Camp2LD = 0x0907170;
         public static ulong PINT_GameOver = 0x0BEEF28;
         public static ulong PINT_SystemMSG = 0x2A110F8;
         public static ulong PINT_ChildMenu = 0x2A10B98;
@@ -359,6 +389,7 @@ namespace ReFined.KH2.Information
         public static string HFIX_ConfigFourth = "48 89 5C 24 08 57 48 83 EC 20 8B FA 8B D9 E8 ?? ?? ?? ?? 8D 0C 3B 44 8D 04 9D 00 00 00 00";
         public static string HFIX_ConfigFifth = "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 30 E8 ?? ?? ?? ?? 45 33 C0 33 C9 41 8D 50 FF E8 ?? ?? ?? ??";
         public static string HFIX_ConfigSixth = "40 53 55 56 57 41 54 41 55 41 56 41 57 48 83 EC 58 E8 ?? ?? ?? ?? 48 8B 0D ?? ?? ?? ?? 4C 8B F8 E8 ?? ?? ?? ?? 41 BD ?? ?? ?? ??";
+        public static string HFIX_ConfigSeventh = "48 89 5C 24 08 48 89 74 24 10 57 48 83 EC 20 33 DB 48 8D 35 ?? ?? ?? ?? 33 FF 66 0F 1F 44 00 00 83 FB 06 0F 87 B5 00 00 00";
 
         public static string HFIX_IntroFirst = "48 89 5C 24 18 55 56 57 41 54 41 55 41 56 41 57 48 83 EC 50 48 8B 05 ?? ?? ?? ??";
         public static string HFIX_IntroSecond = "48 89 5C 24 20 55 56 57 41 54 41 55 41 56 41 57 48 83 EC 50 4C 8B 3D ?? ?? ?? ??";
@@ -372,6 +403,11 @@ namespace ReFined.KH2.Information
         public static List<ulong> HFIX_IntroOffsets = new List<ulong>();
 
         // === ERROR STRINGS === // 
+
+        public static string ERROR_403 = "{0} cannot access any file that's in your Documents folder!\n" +
+                                         "Make sure your Documents folder is actually valid, and your Anti-Virus is not interfering with {0}." +
+                                         "(Yes, Windows Security counts as an Anti-Virus. No, you probably did not disable it.)" +
+                                         "{0} will now terminate.";
 
         public static string ERROR_404 = "{0} was not able to locate the base patch!\n" +
                                          "Please ensure that it is installed correctly!\n" +
@@ -392,7 +428,8 @@ namespace ReFined.KH2.Information
                                          "{0} will now terminate.";
 
         public static string ERROR_600 = "{0} has performed an illegal operation and must terminate!\n" +
-                                         "Please send the log file found in the game directory to the Re:Fined Discord Server.";
+                                         "Please send the log file found in the game directory to the Re:Fined Discord Server.";        
+       
 
 
         // === ENUMERABLES === //
