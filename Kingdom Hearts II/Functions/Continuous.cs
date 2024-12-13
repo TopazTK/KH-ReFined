@@ -166,7 +166,7 @@ namespace ReFined.KH2.Functions
                 FORM_TEXTS = new List<string>();
 
                 for (var i = 0; i < 5; i++)
-                    RPC_TEXTS.Add(Operations.GetStringLiteral(Variables.PINT_SystemMSG, (ushort)(0x0140 + i)).FromKHSCII().Replace("/", "|"));
+                    RPC_TEXTS.Add(Operations.GetStringLiteral(Variables.PINT_SystemMSG, (ushort)(0x5740 + i)).FromKHSCII().Replace("/", "|"));
 
                 for (var i = 0; i < 4; i++)
                 {
@@ -178,7 +178,7 @@ namespace ReFined.KH2.Functions
                     MODE_TEXTS.Add(Operations.GetStringLiteral(Variables.PINT_SystemMSG, _stringID).FromKHSCII());
                 }
 
-                for (var i = 0; i < 5; i++)
+                for (var i = 0; i < 6; i++)
                 {
                     var _stringID = (ushort)(0x432A + (i >= 0x02 ? (i - 1) : i));
 
