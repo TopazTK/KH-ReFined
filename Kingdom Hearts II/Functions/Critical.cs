@@ -151,14 +151,18 @@ namespace ReFined.KH2.Functions
                     var _magicIndex = Hypervisor.Read<byte>(Variables.ADDR_MagicIndex);
                     var _magicMax = Hypervisor.Read<byte>(_menuPointer + 0x10, true);
 
-                    var _inputCheck = Variables.IS_PRESSED(Variables.BUTTON.L2 | Variables.BUTTON.UP) ? 0x01 : (Variables.IS_PRESSED(Variables.BUTTON.L2 | Variables.BUTTON.DOWN) ? 0x02 : 0x00);
-                    var _triggerCheck = Variables.IS_PRESSED(Variables.BUTTON.L2);
+                    var _pressDigital = Variables.IS_PRESSED(Variables.BUTTON.R2 | Variables.BUTTON.UP) ? 0x01 : (Variables.IS_PRESSED(Variables.BUTTON.R2 | Variables.BUTTON.DOWN) ? 0x02 : 0x00);
+                    var _pressAnalog = Variables.IS_PRESSED(Variables.BUTTON.R2) && Variables.IS_PRESSED(Variables.ANALOG.R_UP) ? 0x01 : (Variables.IS_PRESSED(Variables.BUTTON.R2) && Variables.IS_PRESSED(Variables.ANALOG.R_DOWN) ? 0x02 : 0x00);
+
+                    var _inputCheck = (Hypervisor.Read<Variables.CONFIG_BITWISE>(Variables.ADDR_Config) & Variables.CONFIG_BITWISE.RIGHT_STICK) == Variables.CONFIG_BITWISE.RIGHT_STICK ? _pressAnalog : _pressDigital;
+
+                    var _triggerCheck = Variables.IS_PRESSED(Variables.BUTTON.R2);
 
                     var _insCheck = Hypervisor.Read<byte>(CMD_OFFSET + 0x1B1);
 
                     if (_triggerCheck && _insCheck != 0x90)
                     {
-                        Terminal.Log("L2 Detected within Magic Menu! Disabling input registry.", 1);
+                        Terminal.Log("R2 Detected within Magic Menu! Disabling input registry.", 1);
 
                         foreach (var _off in MAGIC_OFFSET)
                         Hypervisor.DeleteInstruction(CMD_OFFSET + _off, 0x03);
@@ -166,7 +170,7 @@ namespace ReFined.KH2.Functions
 
                     else if (!_triggerCheck && _insCheck == 0x90)
                     {
-                        Terminal.Log("L2 has been let go! Enabling input registry.", 1);
+                        Terminal.Log("R2 has been let go! Enabling input registry.", 1);
 
                         for (int i = 0; i < MAGIC_OFFSET.Length; i++)
                             Hypervisor.Write(CMD_OFFSET + MAGIC_OFFSET[i], MAGIC_INST[i]);
@@ -894,22 +898,41 @@ namespace ReFined.KH2.Functions
                 if (_isEscape && Variables.BATTLE_MODE == Variables.BATTLE_TYPE.BOSS && DEBOUNCE[7])
                     DEBOUNCE[7] = false;
 
-                if (_gameOverRead == 0x00 && !_battleState && _pauseRead == 0x01 && _hadesComplete && STATE_COPIED && RETRY_MODE == 0x00)
+                var _detectFirst = _gameOverRead == 0x00 &&
+                                  !_battleState &&
+                                   _pauseRead == 0x01 &&
+                                   _hadesComplete &&
+                                   STATE_COPIED &&
+                                   RETRY_MODE == 0x00;
+
+                if (_detectFirst)
                 {
-                    Terminal.Log("The battle has ended. Restoring state.", 0);
-                    Hypervisor.Write(Variables.ADDR_ContData, new byte[0x10FC0]);
+                    Thread.Sleep(50);
 
-                    if (_isEscape)
+                    var _detectSecond = _gameOverRead == 0x00 &&
+                                       !_battleState &&
+                                        _pauseRead == 0x01 &&
+                                        _hadesComplete &&
+                                        STATE_COPIED &&
+                                        RETRY_MODE == 0x00;
+
+                    if (_detectSecond)
                     {
-                        HADES_COUNT = 255;
-                        Terminal.Log("The battle ended on a special edge-case.", 0);
+                        Terminal.Log("The battle has ended. Restoring state.", 0);
+                        Hypervisor.Write(Variables.ADDR_ContData, new byte[0x10FC0]);
+
+                        if (_isEscape)
+                        {
+                            HADES_COUNT = 255;
+                            Terminal.Log("The battle ended on a special edge-case.", 0);
+                        }
+
+                        Variables.CONTINUE_MENU = new Continue();
+
+                        ROXAS_KEYBLADE = 0x0000;
+                        STATE_COPIED = false;
+                        RETRY_HOLD = false;
                     }
-
-                    Variables.CONTINUE_MENU = new Continue();
-
-                    ROXAS_KEYBLADE = 0x0000;
-                    STATE_COPIED = false;
-                    RETRY_HOLD = false;
                 }
 
                 if (_gameOverRead == 0x00 && Variables.IS_EVENT && RETRY_MODE != 0x00)
@@ -1030,8 +1053,10 @@ namespace ReFined.KH2.Functions
                     {
                         Terminal.Log("Prepare finished! Copying the save state...", 0);
                         var _currentSave = Hypervisor.Read<byte>(Variables.ADDR_SaveData, 0x10FC0);
+
                         Hypervisor.Write(CAMP_OFFSET + 0x1A7, CAMP_FUNCTION);
                         Hypervisor.Write(CAMP_INIT_OFFSET + _initOffset, CAMP_INIT_FUNCTION);
+
                         Hypervisor.Write(Variables.ADDR_ContData, _currentSave);
                         PREPARE_MODE = 0x03;
                     }
