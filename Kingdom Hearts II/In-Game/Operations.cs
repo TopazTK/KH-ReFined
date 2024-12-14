@@ -1,39 +1,60 @@
-﻿using ReFined.Common;
+﻿using ReFined.Libraries;
 using ReFined.KH2.Information;
-using ReFined.Libraries;
-
 using BSharpConvention = Binarysharp.MSharp.Assembly.CallingConvention.CallingConventions;
+using ReFined.Common;
 
 namespace ReFined.KH2.InGame
 {
     public static class Operations
     {
         public static nint FUNC_FINDFILE;
+        public static nint FUNC_OBJENTRYGET;
         public static nint FUNC_GETFILESIZE;
+        public static nint FUNC_MESSAGEGETDATA;
 
-        public static byte[] GetStringLiteral(ulong StartMSG, ushort StringID)
+        public static string GetStringHuman(short StringID)
         {
-            var _msnAbsolute = Hypervisor.Read<ulong>(StartMSG);
+            var _messageOffset = Variables.SharpHook[FUNC_MESSAGEGETDATA].Execute(StringID);
 
-            var _checkFirst = Hypervisor.Read<int>(_msnAbsolute, true);
-            var _checkSecond = Hypervisor.Read<int>(_msnAbsolute - 0x30, true);
-
-            if (_checkFirst != 0x01 || _checkSecond != 0x01524142)
+            if (_messageOffset == IntPtr.Zero)
                 return null;
 
-            var _fetchCount = Hypervisor.Read<int>(_msnAbsolute + 0x04, true);
-            var _fetchData = Hypervisor.Read<byte>(_msnAbsolute + 0x08, _fetchCount * 0x08, true);
+            var _messageAbsolute = Hypervisor.MemoryOffset + (ulong)_messageOffset;
 
-            var _offsetLocal = _fetchData.FindValue<int>(StringID);
-
-            var _offsetString = Hypervisor.Read<int>(_msnAbsolute + _offsetLocal + 0x0C, true);
-
-            int _readOffset = 0;
+            ulong _readOffset = 0;
             List<byte> _returnList = new List<byte>();
 
             while (true)
             {
-                var _byte = Hypervisor.Read<byte>(_msnAbsolute + (ulong)(_offsetString + _readOffset), true);
+                var _byte = Hypervisor.Read<byte>(_messageAbsolute + _readOffset, true);
+
+                _returnList.Add(_byte);
+
+                if (_byte == 0x00)
+                    break;
+
+                else
+                    _readOffset++;
+            }
+
+            return _returnList.ToArray().FromKHSCII();
+        }
+
+        public static byte[] GetStringLiteral(short StringID)
+        {
+            var _messageOffset = Variables.SharpHook[FUNC_MESSAGEGETDATA].Execute(StringID);
+            
+            if (_messageOffset == IntPtr.Zero)
+                return null;
+
+            var _messageAbsolute = Hypervisor.MemoryOffset + (ulong)_messageOffset;
+
+            ulong _readOffset = 0;
+            List<byte> _returnList = new List<byte>();
+
+            while (true)
+            {
+                var _byte = Hypervisor.Read<byte>(_messageAbsolute + _readOffset, true);
 
                 _returnList.Add(_byte);
 
@@ -47,24 +68,14 @@ namespace ReFined.KH2.InGame
             return _returnList.ToArray();
         }
 
-        public static ulong GetStringPointer(ulong StartMSG, ushort StringID)
+        public static ulong GetStringPointer(short StringID)
         {
-            var _msnAbsolute = Hypervisor.Read<ulong>(StartMSG);
+            var _messageOffset = Variables.SharpHook[FUNC_MESSAGEGETDATA].Execute(StringID);
 
-            var _checkFirst = Hypervisor.Read<int>(_msnAbsolute, true);
-            var _checkSecond = Hypervisor.Read<int>(_msnAbsolute - 0x30, true);
-
-            if (_checkFirst != 0x01 || _checkSecond != 0x01524142)
+            if (_messageOffset == IntPtr.Zero)
                 return 0x00;
 
-            var _fetchCount = Hypervisor.Read<int>(_msnAbsolute + 0x04, true);
-            var _fetchData = Hypervisor.Read<byte>(_msnAbsolute + 0x08, _fetchCount * 0x08, true);
-
-            var _offsetLocal = _fetchData.FindValue<int>(StringID);
-
-            var _offsetString = Hypervisor.Read<uint>(_msnAbsolute + _offsetLocal + 0x0C, true);
-
-            return _msnAbsolute + _offsetString;
+            return Hypervisor.MemoryOffset + (ulong)_messageOffset;
         }
 
         /// <summary>
@@ -86,5 +97,22 @@ namespace ReFined.KH2.InGame
         /// <returns>A 32-bit integer containing the size in bytes, "0" if the file is not found.</returns>
         public static int GetFileSize(string Input) => Variables.SharpHook[FUNC_GETFILESIZE].Execute<int>(Input);
 
+    
+        /// <summary>
+        /// Finds the absolute position of a Objentry Entry based on the given ID.
+        /// If it cannot find said ID, it will return 0.
+        /// </summary>
+        /// <param name="ObjectID">ID of the object to find.</param>
+        /// <returns>Absolute position in memory if found, 0x00 otherwise.</returns>
+        public static ulong FindInObjentry(short ObjectID)
+        {
+            var _fetchObject = Variables.SharpHook[FUNC_OBJENTRYGET].Execute(ObjectID);
+
+            if (_fetchObject == IntPtr.Zero)
+                return 0x00;
+
+            else
+                return Hypervisor.MemoryOffset + (ulong)_fetchObject;
+        }
     }
 }

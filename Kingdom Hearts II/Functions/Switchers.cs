@@ -3,6 +3,8 @@ using System.Text;
 using ReFined.Common;
 using ReFined.Libraries;
 using ReFined.KH2.Information;
+using ReFined.KH2.InGame;
+using System.Security.Cryptography;
 
 namespace ReFined.KH2.Functions
 {
@@ -156,7 +158,7 @@ namespace ReFined.KH2.Functions
                 }
             }
 
-            catch (IndexOutOfRangeException)
+            catch (ArgumentOutOfRangeException)
             {
                 Terminal.Log("Caught an exception within Multi Audio... Switching to English Audio.", 1);
                 Variables.AUDIO_MODE = 0x00;
@@ -206,59 +208,31 @@ namespace ReFined.KH2.Functions
 
         public static void SwitchEnemies()
         {
-            byte _bossPrefix = Variables.ENEMY_VANILLA ? (byte)0x56 : (byte)0x42;
-            byte _enemyPrefix = Variables.ENEMY_VANILLA ? (byte)0x56 : (byte)0x4D;
-
-            if (OBJENTRY_READ == null)
+            if (!Variables.IS_TITLE && Variables.ENEMY_VANILLA != PAST_ENEMY)
             {
-                var _headerCheck = Hypervisor.Read<byte>(Variables.ADDR_ObjentryBase);
-                var _itemCount = Hypervisor.Read<int>(Variables.ADDR_ObjentryBase + 0x04);
+                Terminal.Log(String.Format("Switching Enemies to the {0} Palette...", Variables.ENEMY_VANILLA ? "Classic" : "Special"), 0);
 
-                if (_headerCheck == 0x03)
-                    OBJENTRY_READ = Hypervisor.Read<byte>(Variables.ADDR_ObjentryBase + 0x08, 0x60 * _itemCount);
-            }
-
-            if (OBJENTRY_READ != null)
-            {
-                if (Variables.IS_TITLE)
-                    OBJENTRY_READ = null;
-
-                else if (Variables.ENEMY_VANILLA != PAST_ENEMY)
+                foreach (var _id in Variables.BOSSObjentry)
                 {
-                    Terminal.Log(String.Format("Switching Enemies to the {0} Palette...", Variables.ENEMY_VANILLA ? "Classic" : "Special"), 0);
+                    var _fetchObjentry = Operations.FindInObjentry(_id);
+                    var _readName = Hypervisor.ReadString(_fetchObjentry + 0x08, true);
 
-                    foreach (var _name in Variables.BOSSObjentry)
-                    {
-                        var _stringArr1 = Encoding.Default.GetBytes(_name);
-                        var _stringArr2 = Encoding.Default.GetBytes(_name.Replace("B_", "V_"));
+                    var _nameString = _readName.StartsWith("V_") ? _readName.Replace("V_", "B_") : _readName.Replace("B_", "V_");
 
-                        var _searchClassic = OBJENTRY_READ.FindValue(_stringArr2);
-                        var _searchRemastered = OBJENTRY_READ.FindValue(_stringArr1);
-
-                        if (_searchClassic == 0xFFFFFFFFFFFFFFFF && _searchRemastered == 0xFFFFFFFFFFFFFFFF)
-                            break;
-
-                        else
-                            Hypervisor.Write(Variables.ADDR_ObjentryBase + 0x08 + (_searchClassic == 0xFFFFFFFFFFFFFFFF ? _searchRemastered : _searchClassic), _bossPrefix);
-                    }
-
-                    foreach (var _name in Variables.ENEMYObjentry)
-                    {
-                        var _stringArr1 = Encoding.Default.GetBytes(_name);
-                        var _stringArr2 = Encoding.Default.GetBytes(_name.Replace("M_", "V_"));
-
-                        var _searchClassic = OBJENTRY_READ.FindValue(_stringArr2);
-                        var _searchRemastered = OBJENTRY_READ.FindValue(_stringArr1);
-
-                        if (_searchClassic == 0xFFFFFFFFFFFFFFFF && _searchRemastered == 0xFFFFFFFFFFFFFFFF)
-                            break;
-
-                        else
-                            Hypervisor.Write(Variables.ADDR_ObjentryBase + 0x08 + (_searchClassic == 0xFFFFFFFFFFFFFFFF ? _searchRemastered : _searchClassic), _enemyPrefix);
-                    }
-
-                    PAST_ENEMY = Variables.ENEMY_VANILLA;
+                    Hypervisor.WriteString(_fetchObjentry + 0x08, _nameString, true);
                 }
+
+                foreach (var _id in Variables.ENEMYObjentry)
+                {
+                    var _fetchObjentry = Operations.FindInObjentry(_id);
+                    var _readName = Hypervisor.ReadString(_fetchObjentry + 0x08, true);
+
+                    var _nameString = _readName.StartsWith("V_") ? _readName.Replace("V_", "M_") : _readName.Replace("M_", "V_");
+
+                    Hypervisor.WriteString(_fetchObjentry + 0x08, _nameString, true);
+                }
+
+                PAST_ENEMY = Variables.ENEMY_VANILLA;
             }
         }
     }

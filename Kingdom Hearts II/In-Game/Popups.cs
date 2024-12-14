@@ -12,20 +12,20 @@ namespace ReFined.KH2.InGame
 
         public static void PopupMenu(int Type, int SubType) => Variables.SharpHook[FUNC_STARTCAMP].Execute(BSharpConvention.MicrosoftX64, Type, SubType);
 
-        public static void PopupInformation(ushort StringID)
+        public static void PopupInformation(short StringID)
         {
             if (!Variables.IS_TITLE && Variables.IS_LOADED && !Variables.IS_CUTSCENE)
             {
-                long _pointString = (long)Operations.GetStringPointer(Variables.PINT_SystemMSG, StringID);
+                long _pointString = (long)Operations.GetStringPointer(StringID);
                 Variables.SharpHook[FUNC_SHOWINFORMATION].Execute(_pointString);
             }
         }
 
-        public static void PopupPrize(ushort StringID)
+        public static void PopupPrize(short StringID)
         {
             if (!Variables.IS_TITLE && Variables.IS_LOADED && !Variables.IS_CUTSCENE)
             {
-                long _pointString = (long)Operations.GetStringPointer(Variables.PINT_SystemMSG, StringID);
+                long _pointString = (long)Operations.GetStringPointer(StringID);
                 Variables.SharpHook[FUNC_SHOWPRIZE].Execute(_pointString);
             }
         }

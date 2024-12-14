@@ -39,21 +39,8 @@ namespace ReFined.KH2.Functions
                 Variables.RESET_COMBO |= _buttonOut;
             }
 
-            var _mareRead = _configIni.Read("mareShortcut", "General");
-            var _mareSplit = _mareRead.Replace("[", "").Replace("]", "").Replace(", ", ",").Split(new char[] { ',' });
-
-            for (int i = 0; i < _mareSplit.Length; i++)
-            {
-                Variables.BUTTON _buttonOut;
-                Enum.TryParse(_mareSplit[i], out _buttonOut);
-                Variables.MARE_SHORTCUT |= _buttonOut;
-            }
-
             if (Variables.RESET_COMBO == Variables.BUTTON.NONE)
                 Variables.RESET_COMBO = (Variables.BUTTON)0xFFFF;
-
-            if (Variables.MARE_SHORTCUT == Variables.BUTTON.NONE)
-                Variables.MARE_SHORTCUT = Variables.BUTTON.SQUARE;
 
             VERSION_STRING = Variables.IS_LITE ? "Re:Freshed" : "Re:Fined";
 
@@ -93,6 +80,8 @@ namespace ReFined.KH2.Functions
 
             Operations.FUNC_FINDFILE = Hypervisor.FindSignature(Variables.FUNC_FindFile);
             Operations.FUNC_GETFILESIZE = Hypervisor.FindSignature(Variables.FUNC_GetFileSize);
+            Operations.FUNC_OBJENTRYGET = Hypervisor.FindSignature(Variables.FUNC_ObjentryGet);
+            Operations.FUNC_MESSAGEGETDATA = Hypervisor.FindSignature(Variables.FUNC_MessageGetData);
 
             Sound.FUNC_PLAYSFX = Hypervisor.FindSignature(Variables.FUNC_PlaySFX);
             Sound.FUNC_KILLBGM = Hypervisor.FindSignature(Variables.FUNC_StopBGM);

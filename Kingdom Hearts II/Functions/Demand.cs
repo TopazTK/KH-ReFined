@@ -797,7 +797,7 @@ namespace ReFined.KH2.Functions
             var _shortFake = Variables.ADDR_SaveData + 0xE100;
 
             if (SORA_MSG_POINT == 0x00)
-                SORA_MSG_POINT = Operations.GetStringPointer(Variables.PINT_SystemMSG, 0x051F);
+                SORA_MSG_POINT = Operations.GetStringPointer(0x051F);
 
             var _isInMainShortcut = _isPaused == 0x00 && _subMenuType == 0x19;
             var _isEditingShortcut = _isPaused == 0x00 && (_subMenuType == 0x1A || _subMenuType == 0x1D || _subMenuType == 0x1E || _subMenuType == 0x1F);
@@ -805,8 +805,8 @@ namespace ReFined.KH2.Functions
 
             if (MAIN_TEXT == null)
             {
-                SORA_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x572E);
-                MAIN_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x051F);
+                SORA_TEXT = Operations.GetStringLiteral(0x572E);
+                MAIN_TEXT = Operations.GetStringLiteral(0x051F);
             }
 
             if (!Variables.IS_TITLE && !Variables.IS_LITE)
@@ -954,7 +954,7 @@ namespace ReFined.KH2.Functions
                 var _isPaused = Hypervisor.Read<byte>(Variables.ADDR_PauseFlag) == 0x00 ? true : false;
                 var _menuType = Hypervisor.Read<byte>(Variables.ADDR_MenuType);
 
-                UPDATE_TEXT_ABSOLUTE = Operations.GetStringPointer(Variables.PINT_SystemMSG, 0x5729);
+                UPDATE_TEXT_ABSOLUTE = Operations.GetStringPointer(0x5729);
 
                 if (!Variables.IS_TITLE && Variables.IS_LOADED)
                 {
@@ -981,8 +981,8 @@ namespace ReFined.KH2.Functions
 
                         if (UPDATE_DONE_TEXT == null)
                         {
-                            UPDATE_DONE_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x572A);
-                            UPDATE_TEXT = Operations.GetStringLiteral(Variables.PINT_SystemMSG, 0x5729);
+                            UPDATE_DONE_TEXT = Operations.GetStringLiteral(0x572A);
+                            UPDATE_TEXT = Operations.GetStringLiteral(0x5729);
 
                             UPDATE_BAR_INDEX = UPDATE_TEXT.ToList().FetchIndexOf(x => x == 0x87);
 

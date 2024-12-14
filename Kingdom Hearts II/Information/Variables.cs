@@ -98,6 +98,9 @@ namespace ReFined.KH2.Information
         public static bool IS_PRESSED(BUTTON Input) =>
             (Hypervisor.Read<BUTTON>(ADDR_Input) & Input) == Input;
 
+        public static bool IS_PRESSED(ANALOG Input) =>
+            (Hypervisor.Read<ANALOG>(ADDR_Input + 0x02) & Input) == Input;
+
         public static BATTLE_TYPE BATTLE_MODE =>
             Hypervisor.Read<BATTLE_TYPE>(ADDR_BattleFlag);
 
@@ -114,58 +117,58 @@ namespace ReFined.KH2.Information
             "P_AL010"
         };
 
-        public static string[] BOSSObjentry =
+        public static short[] BOSSObjentry =
         {
-            "B_BB100",
-            "B_BB100_GM",
-            "B_BB100_TSURU",
-            "B_CA000",
-            "B_CA050",
-            "B_CA050_GM",
-            "B_LK120",
-            "B_LK120_GM",
-            "B_MU120",
-            "B_MU120_GM",
+            0x0161,
+            0x08A8,
+            0x0190,
+            0x0166,
+            0x0607,
+            0x08DB,
+            0x0459,
+            0x08C6,
+            0x0165,
+            0x08DD
         };
 
-        public static string[] ENEMYObjentry =
+        public static short[] ENEMYObjentry =
         {
-            "M_EX010",
-            "M_EX010_NM",
-            "M_EX050",
-            "M_EX060",
-            "M_EX200",
-            "M_EX200_NM",
-            "M_EX500",
-            "M_EX500_GM",
-            "M_EX500_HB",
-            "M_EX500_HB_GM",
-            "M_EX500_NM",
-            "M_EX510",
-            "M_EX520",
-            "M_EX520_AL",
-            "M_EX530",
-            "M_EX540",
-            "M_EX550",
-            "M_EX560",
-            "M_EX570",
-            "M_EX590",
-            "M_EX620",
-            "M_EX620_AL",
-            "M_EX630",
-            "M_EX640",
-            "M_EX650",
-            "M_EX670",
-            "M_EX690",
-            "M_EX710",
-            "M_EX720",
-            "M_EX730",
-            "M_EX750",
-            "M_EX750_NM",
-            "M_EX780",
-            "M_EX790",
-            "M_EX790_HALLOWEEN",
-            "M_EX790_HALLOWEEN_NM"
+            0x012D,
+            0x072E,
+            0x012F,
+            0x0001,
+            0x0076,
+            0x0077,
+            0x0002,
+            0x0888,
+            0x0963,
+            0x097C,
+            0x0723,
+            0x0003,
+            0x0004,
+            0x075F,
+            0x0005,
+            0x0006,
+            0x0007,
+            0x0008,
+            0x0009,
+            0x004B,
+            0x000B,
+            0x06E0,
+            0x000C,
+            0x000D,
+            0x000E,
+            0x000F,
+            0x0011,
+            0x007A,
+            0x0013,
+            0x007B,
+            0x007D,
+            0x072D,
+            0x0014,
+            0x081C,
+            0x06EE,
+            0x06EF
         };
 
         public static List<BUTTON> KONAMI_CODE = new List<BUTTON>()
@@ -364,6 +367,8 @@ namespace ReFined.KH2.Information
         public static string FUNC_SelectUpdate = "48 83 EC 28 48 8B 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 63 D0 48 8B 05 ?? ?? ?? ?? 48 0F BE 0C 02";
         public static string FUNC_FadeCampWarning = "48 83 EC 28 85 C9 BA 0B 00 00 00 48 8B 0D ?? ?? ?? ?? B8 08 00 00 00 0F 44 D0 E8 ?? ?? ?? ?? 48 8B 0D ?? ?? ?? ??";
         public static string FUNC_ResetCommandMenu = "40 56 48 83 EC 30 8B 35 ?? ?? ?? ?? E8 ?? ?? ?? ?? 84 C0 0F 85 ?? ?? ?? ?? E8 ?? ?? ?? ?? 84 C0";
+        public static string FUNC_ObjentryGet = "40 53 48 83 EC 20 8B C1 8B D1 25 FF FF FF 0F 3D EE 03 00 00 0F 87 ?? ?? ?? ?? 0F 84 ?? ?? ?? ??";
+        public static string FUNC_MessageGetData = "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 41 56 41 57 48 83 EC 50 45 33 F6 48 63 E9 33 F6 48 8D 3D ?? ?? ?? ?? 4C 8D 3D ?? ?? ?? ??";
 
         // === HOTFIX SIGNATURES === //
 
@@ -440,6 +445,19 @@ namespace ReFined.KH2.Information
             FIELD = 0x01,
             BOSS = 0x02
         };
+
+        public enum ANALOG : byte
+        {
+            NONE = 0x00,
+            R_LEFT = 0x01,
+            R_DOWN = 0x02,
+            R_RIGHT = 0x04,
+            R_UP = 0x08,
+            L_LEFT = 0x10,
+            L_DOWN = 0x20,
+            L_RIGHT = 0x40,
+            L_UP = 0x80
+        }
 
         public enum BUTTON : ushort
         {
