@@ -106,6 +106,8 @@ The current official addons for each game can be seen below, and what they do be
 - **KH-ReFined/KH2-VanillaEnemy** - Adds an option to use the classic Heartless Colors in Kingdom Hearts II. Can be toggled from the in-game config menu or at the New Game screen.
 - **KH-ReFined/KH2-JapaneseVO** - Adds an option to use Japanese Voice Over in Kingdom Hearts II. Can be toggled from the in-game config menu or at the New Game screen.
 - **KH-ReFined/KH2-SpanishVO** - Adds an option to use Spanish Voice Over in Kingdom Hearts II. Can be toggled from the in-game config menu or at the New Game screen.
+- **KH-ReFined/KH2-FrenchVO** - Adds an option to use French Voice Over in Kingdom Hearts II. Can be toggled from the in-game config menu or at the New Game screen.
+- **KH-ReFined/KH2-GermanVO** - Adds an option to use German Voice Over in Kingdom Hearts II. Can be toggled from the in-game config menu or at the New Game screen.
 
 > [!NOTE]  
 > These addons require the use of OpenKH Mod Manager.
@@ -151,6 +153,9 @@ Thank you for your consideration, all support is appreciated!
 - **Some1fromthedark** for his contributions to the new Configuration System.
 - **gg3502** for his help in the SharpHook Engine.
 - **MainMemory** for her help in fixing Panacea related issues.
+- **TieuLink** for the origins of all Voice Packs.
+- **Napstio** for implementing FrenchVO and GermanVO.
+- **Jaster** for adding in Sora's Scribbles back.
 
 ## Third Party Libraries
 
