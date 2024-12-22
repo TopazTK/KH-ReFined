@@ -1,10 +1,7 @@
-using System.Text;
-
 using ReFined.Common;
 using ReFined.Libraries;
 using ReFined.KH2.Information;
 using ReFined.KH2.InGame;
-using System.Security.Cryptography;
 
 namespace ReFined.KH2.Functions
 {
@@ -17,7 +14,6 @@ namespace ReFined.KH2.Functions
         static bool TOGGLE_WI;
         static bool PAST_MUSIC;
         static bool PAST_ENEMY;
-        static byte[] OBJENTRY_READ;
 
         static byte PAST_VLAD = 0x00;
         static byte PAST_TYPE = 0x00;
@@ -26,97 +22,41 @@ namespace ReFined.KH2.Functions
         {
             var _worldCheck = Hypervisor.Read<byte>(Variables.ADDR_Area);
 
-            if (OBJENTRY_READ == null)
-            {
-                var _headerCheck = Hypervisor.Read<byte>(Variables.ADDR_ObjentryBase);
-                var _itemCount = Hypervisor.Read<int>(Variables.ADDR_ObjentryBase + 0x04);
-
-                if (_headerCheck == 0x03)
-                    OBJENTRY_READ = Hypervisor.Read<byte>(Variables.ADDR_ObjentryBase + 0x08, 0x60 * _itemCount);
-            }
-
             if (!Variables.TECHNICOLOR)
             {
-                if (OBJENTRY_READ != null)
+                if (_worldCheck == 0x0D && !TOGGLE_WI)
                 {
-                    if (Variables.IS_TITLE)
-                        OBJENTRY_READ = null;
+                    Terminal.Log("Adjusting Elements for Timeless River.", 0);
 
-                    if (_worldCheck == 0x0D && !TOGGLE_WI)
+                    foreach (var _id in Variables.SUMMObjentry)
                     {
-                        Terminal.Log("Adjusting Elements for Timeless River.", 0);
+                        var _fetchObjentry = Operations.FindInObjentry(_id);
+                        var _readName = Hypervisor.ReadString(_fetchObjentry + 0x08, true);
 
-                        foreach (var _name in Variables.SUMMObjentry)
-                        {
-                            var _fetchSummon = Encoding.Default.GetBytes(_name);
-                            var _searchSummon = OBJENTRY_READ.FindValue(_fetchSummon);
+                        var _nameString = _readName.Replace("P_", "X_").Replace("N_", "X_");
 
-                            if (_searchSummon == 0xFFFFFFFFFFFFFFFF)
-                                break;
-
-                            else
-                                Hypervisor.WriteString(Variables.ADDR_ObjentryBase + 0x08 + _searchSummon, _name.Replace("P_", "X_").Replace("N_", "X_"));
-                        }
-
-                        TOGGLE_WI = true;
+                        Hypervisor.WriteString(_fetchObjentry + 0x08, _nameString, true);
                     }
 
-                    else if (_worldCheck != 0x0D && TOGGLE_WI)
+                    TOGGLE_WI = true;
+                }
+
+                else if (_worldCheck != 0x0D && TOGGLE_WI)
+                {
+                    Terminal.Log("Adjusting Elements for Colored Worlds.", 0);
+
+                    foreach (var _id in Variables.SUMMObjentry)
                     {
-                        Terminal.Log("Adjusting Elements for Colored Worlds.", 0);
+                        var _fetchObjentry = Operations.FindInObjentry(_id);
+                        var _readName = Hypervisor.ReadString(_fetchObjentry + 0x08, true);
 
-                        foreach (var _name in Variables.SUMMObjentry)
-                        {
-                            var _fetchSummon = Encoding.Default.GetBytes(_name.Replace("P_", "X_").Replace("N_", "X_"));
-                            var _searchSummon = OBJENTRY_READ.FindValue(_fetchSummon);
+                        var _nameString = _readName.Contains("_BTL") ? _readName.Replace("X_", "N_") : _readName.Replace("X_", "P_");
 
-                            if (_searchSummon == 0xFFFFFFFFFFFFFFFF)
-                                break;
-
-                            else
-                                Hypervisor.WriteString(Variables.ADDR_ObjentryBase + 0x08 + _searchSummon, _name);
-                        }
-
-                        TOGGLE_WI = false;
+                        Hypervisor.WriteString(_fetchObjentry + 0x08, _nameString, true);
                     }
+
+                    TOGGLE_WI = false;
                 }
-            }
-        }
-
-        public static void SwitchCommand()
-        {
-            var _checkString = Hypervisor.ReadString(Variables.ADDR_CommandMenu);
-            var _vladBit = Hypervisor.Read<byte>(Variables.ADDR_Config + 0x03);
-            var _typeCheck = Hypervisor.Read<byte>(Variables.ADDR_PromptType);
-
-            if (_vladBit == 0x01 && (_typeCheck != PAST_TYPE || !_checkString.Contains("qd0")))
-            {
-                Terminal.Log("Toggling the Quadratum Command Menu.", 0x00);
-
-                if (_typeCheck == 0x01)
-                {
-                    Hypervisor.WriteString(Variables.ADDR_CommandMenu, "field2d/%s/qd0cmdxbox.2dd");
-                    Hypervisor.WriteString(Variables.ADDR_CommandMenu + 0x20, "qd0cmdxbox.2dd");
-                }
-
-                else
-                {
-                    Hypervisor.WriteString(Variables.ADDR_CommandMenu, "field2d/%s/qd0command.2dd");
-                    Hypervisor.WriteString(Variables.ADDR_CommandMenu + 0x20, "qd0command.2dd");
-                }
-
-                PAST_TYPE = _typeCheck;
-                Hypervisor.Write(Variables.ADDR_CommandFlag, 0x02);
-            }
-
-            else if (_vladBit == 0x00 && !_checkString.Contains("zz0command"))
-            {
-                Terminal.Log("Toggling the Classic Command Menu.", 0x00);
-
-                Hypervisor.WriteString(Variables.ADDR_CommandMenu, "field2d/%s/zz0command.2dd");
-                Hypervisor.WriteString(Variables.ADDR_CommandMenu + 0x20, "zz0command.2dd");
-
-                Hypervisor.Write(Variables.ADDR_CommandFlag, 0x02);
             }
         }
 
@@ -158,7 +98,7 @@ namespace ReFined.KH2.Functions
                 }
             }
 
-            catch (ArgumentOutOfRangeException)
+            catch (ArgumentOutOfRangeException) 
             {
                 Terminal.Log("Caught an exception within Multi Audio... Switching to English Audio.", 1);
                 Variables.AUDIO_MODE = 0x00;
@@ -203,6 +143,36 @@ namespace ReFined.KH2.Functions
                 Hypervisor.Write<byte>(Variables.DATA_BGMPath, Variables.MUSIC_VANILLA ? [0x70, 0x73, 0x32, 0x6D, 0x64] : [0x6D, 0x75, 0x73, 0x69, 0x63]);
 
                 PAST_MUSIC = Variables.MUSIC_VANILLA;
+            }
+        }
+
+        public static void SwitchCommand()
+        {
+            var _checkString = Hypervisor.ReadString(Variables.ADDR_CommandMenu);
+            var _vladBit = Hypervisor.Read<byte>(Variables.ADDR_Config + 0x03);
+            var _typeCheck = Hypervisor.Read<byte>(Variables.ADDR_PromptType);
+
+            var _vladCommand = _typeCheck == 0x01 ? "qd0cmdxbox.2dd" : "qd0command.2dd";
+
+            if (_vladBit == 0x01 && !_checkString.Contains(_vladCommand))
+            {
+                Terminal.Log("Toggling the Quadratum Command Menu.", 0x00);
+
+                Hypervisor.WriteString(Variables.ADDR_CommandMenu, "field2d/%s/" + _vladCommand);
+                Hypervisor.WriteString(Variables.ADDR_CommandMenu + 0x20, _vladCommand); if (_typeCheck == 0x01)
+
+                    PAST_TYPE = _typeCheck;
+                Hypervisor.Write(Variables.ADDR_CommandFlag, 0x02);
+            }
+
+            else if (_vladBit == 0x00 && !_checkString.Contains("zz0command"))
+            {
+                Terminal.Log("Toggling the Classic Command Menu.", 0x00);
+
+                Hypervisor.WriteString(Variables.ADDR_CommandMenu, "field2d/%s/zz0command.2dd");
+                Hypervisor.WriteString(Variables.ADDR_CommandMenu + 0x20, "zz0command.2dd");
+
+                Hypervisor.Write(Variables.ADDR_CommandFlag, 0x02);
             }
         }
 

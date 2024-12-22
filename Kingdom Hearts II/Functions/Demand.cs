@@ -56,12 +56,17 @@ namespace ReFined.KH2.Functions
         {
             if (Variables.AUTOATTACK)
             {
-                var _currAction = Hypervisor.Read<int>(Variables.ADDR_ActionExe);
+                var _actionPoint = Hypervisor.GetPointer64(Variables.PINT_ActionEXE, [0x0A]);
+
+                var _currAction = Hypervisor.Read<int>(_actionPoint, true);
                 var _subCommand = Hypervisor.Read<ulong>(Variables.PINT_ChildMenu);
                 var _partyLimit = Hypervisor.Read<ulong>(Variables.PINT_PartyLimit);
                 var _currCommand = Hypervisor.Read<byte>(Hypervisor.GetPointer64(Variables.PINT_ChildMenu - 0x08, [0x74]), true);
                 var _firstCommand = Hypervisor.Read<short>(Hypervisor.GetPointer64(Variables.PINT_ChildMenu - 0x08, [0x16]), true);
                 var _mainCommandType = Hypervisor.Read<byte>(Hypervisor.GetPointer64(Variables.PINT_ChildMenu - 0x08, [0x00]), true);
+
+                // Add the following to the _isCommandGood statement to let all hell loose.
+                // _firstCommand == 0x021D
 
                 var _isActionGood = _subCommand == 0x00 && _partyLimit == 0x00 && _currCommand == 0x00;
                 var _isCommandGood = (_firstCommand == 0x0001 || _firstCommand == 0x016D || _firstCommand == 0x0088) && (_mainCommandType == 0x00 || _mainCommandType == 0x06);
@@ -70,10 +75,10 @@ namespace ReFined.KH2.Functions
                 var _autoCheck = Variables.IS_PRESSED(Variables.CONFIRM_BUTTON) && _isActionGood && _isCommandGood && _isStatusGood;
 
                 if (_autoCheck && _currAction == 0x00)
-                    Hypervisor.Write(Variables.ADDR_ActionExe, 0x01);
+                    Hypervisor.Write(_actionPoint, 0x01, true);
 
                 else if (!_autoCheck && _currAction == 0x01)
-                    Hypervisor.Write(Variables.ADDR_ActionExe, 0x00);
+                    Hypervisor.Write(_actionPoint, 0x00, true);
             }
         }
        
@@ -229,25 +234,22 @@ namespace ReFined.KH2.Functions
 
                         Critical.LOCK_AUTOSAVE = true;
 
+                        Hypervisor.DeleteInstruction((ulong)(Critical.OffsetSetFadeOff + 0x81A), 0x08);
+
                         Hypervisor.Write(Variables.ADDR_Area, 0x322002);
                         Hypervisor.Write(Variables.ADDR_Area + 0x04, 0x01);
                         Hypervisor.Write(Variables.ADDR_Area + 0x08, 0x01);
 
-                        while (Hypervisor.Read<byte>(Variables.ADDR_FadeValue) != 0x80) ;
-
-                        Hypervisor.DeleteInstruction((ulong)(Critical.OffsetSetFadeOff + 0x81A), 0x08);
-                        Hypervisor.Write<byte>(Variables.ADDR_FadeValue, 0x80);
-
-                        while (!Variables.IS_LOADED) ;
-
                         Variables.SharpHook[Critical.OffsetMapJump].Execute(BSharpConvention.MicrosoftX64, (long)(Hypervisor.PureAddress + Variables.ADDR_Area), 2, 0, 0, 0);
 
                         while (!Variables.IS_LOADED) ;
+                        Hypervisor.Write<byte>(Variables.ADDR_FadeValue, 0x80);
 
                         Hypervisor.Write<byte>((ulong)(Critical.OffsetSetFadeOff + 0x81A), [0xF3, 0x0F, 0x11, 0x8F, 0x0C, 0x01, 0x00, 0x00]);
 
                         Hypervisor.Write(Variables.ADDR_SaveData + 0x1CD0, 0x1FF00001);
                         Hypervisor.Write(Variables.ADDR_SaveData + 0x1CD4, 0x00000000);
+
 
                         SKIP_STAGE = 1;
                     }
@@ -364,7 +366,6 @@ namespace ReFined.KH2.Functions
 
                     Hypervisor.Write(Variables.ADDR_SaveData + 0x23EE, 0x01);
 
-                    Hypervisor.Write(Variables.ADDR_SaveData + 0x2444, 0x098A);
                     Hypervisor.Write(Variables.ADDR_SaveData + 0x2454, 0x0989);
 
                     Hypervisor.Write(Variables.ADDR_SaveData + 0x353D, 0x00120201);
@@ -377,8 +378,6 @@ namespace ReFined.KH2.Functions
                         Variables.ADDR_SaveData + 0x4278,
                         new byte[]
                         {
-                            0xF8,
-                            0x00,
                             0x89,
                             0x01,
                             0x88,
@@ -641,7 +640,7 @@ namespace ReFined.KH2.Functions
                             0xFF,
                             0xFF,
                             0xFF,
-                            0x07,
+                            0x3F,
                             0x00,
                             0x00,
                             0x00,
@@ -657,6 +656,11 @@ namespace ReFined.KH2.Functions
                             0x81
                         });
 
+                    Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x1CD0 + 0x734, 0x04);
+
+                    Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x1CD0 + 0x734 + 0x4F, 0xDB);
+                    Hypervisor.Write<ushort>(Variables.ADDR_SaveData + 0x1CD0 + 0x24D4, 0xE40C);
+
                     if (_diffRead == 0x03)
                     {
                         Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x24F4, 0x18);
@@ -665,8 +669,6 @@ namespace ReFined.KH2.Functions
                             Variables.ADDR_SaveData + 0x2544,
                             new byte[]
                             {
-                                0xF8,
-                                0x00,
                                 0x89,
                                 0x01,
                                 0x88,
@@ -710,34 +712,9 @@ namespace ReFined.KH2.Functions
                     Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x36C7, 0x80);
                     Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x36C9, 0x80);
 
-                    ulong _initOffset = Variables.PLATFORM == "STEAM" ? 0x517U : 0x4D7U;
-
-                    Hypervisor.DeleteInstruction(Critical.CAMP_OFFSET + 0x1A7, 0x07);
-                    Hypervisor.DeleteInstruction(Critical.CAMP_INIT_OFFSET + _initOffset, 0x08);
-
-                    var _campBitwise = Variables.CAMP_BITWISE.ITEMS |
-                                       Variables.CAMP_BITWISE.ABILITIES |
-                                       Variables.CAMP_BITWISE.CUSTOMIZE |
-                                       Variables.CAMP_BITWISE.STATUS |
-                                       Variables.CAMP_BITWISE.PARTY | 
-                                       Variables.CAMP_BITWISE.CONFIG;
-
-                    Hypervisor.Write(Variables.ADDR_CampBitwise, _campBitwise);
-
                     Critical.LOCK_AUTOSAVE = false;
                     OBSERVE_ROXAS = true;
 
-                    SKIP_STAGE = 2;
-                }
-                
-                else if (_worldCheck == 0x02 && _roomCheck == 0x02 && _cutsceneMode == 0x00 && SKIP_STAGE == 2)
-                {
-                    ulong _initOffset = Variables.PLATFORM == "STEAM" ? 0x517U : 0x4D7U;
-
-                    Hypervisor.Write(Critical.CAMP_OFFSET + 0x1A7, Critical.CAMP_FUNCTION);
-                    Hypervisor.Write(Critical.CAMP_INIT_OFFSET + _initOffset, Critical.CAMP_INIT_FUNCTION);
-
-                    Terminal.Log("Roomchange Detected! Unlocking the Journal Option!", 0);
                     SKIP_STAGE = 3;
                 }
 
@@ -1077,7 +1054,7 @@ namespace ReFined.KH2.Functions
                 var _titleOkay = Variables.IS_TITLE && _isMenu == 0x00;
                 var _menuOkay = !Variables.IS_TITLE && _isMenu == 0x01 && _typeMenu == 0x08;
 
-                if (Variables.IS_PRESSED(Variables.MARE_SHORTCUT) && (_titleOkay || _menuOkay))
+                if (Variables.IS_PRESSED(Variables.BUTTON.SQUARE) && (_titleOkay || _menuOkay))
                 {
                     Hypervisor.DeleteInstruction(0x103A80 + 0x1C, 0x06);
                     Thread.Sleep(10);

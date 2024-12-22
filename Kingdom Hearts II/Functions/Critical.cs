@@ -14,6 +14,7 @@ namespace ReFined.KH2.Functions
         public static IntPtr OffsetSetFadeOff;
         public static IntPtr OffsetConfigUpdate;
         public static IntPtr OffsetSelectUpdate;
+        public static IntPtr OffsetItemUpdate;
 
         public static ulong WARP_OFFSET;
         public static ulong INVT_OFFSET;
@@ -24,8 +25,8 @@ namespace ReFined.KH2.Functions
         public static ulong ICON_OFFSET;
         public static ulong LIST_OFFSET;
         public static ulong EQUIP_OFFSET;
-        public static ulong CATEGORY_OFFSET;
         public static ulong FORM_OFFSET;
+        public static ulong CATEGORY_OFFSET;
 
         public static byte[] CAMP_FUNCTION;
         public static byte[] CAMP_INIT_FUNCTION;
@@ -78,6 +79,18 @@ namespace ReFined.KH2.Functions
         static uint MAGIC_LV1;
         static ushort MAGIC_LV2;
         static bool ROOM_LOADED;
+
+        static int INDEX_ABSOLUTION = 0xFF;
+        static int INDEX_RETRIBUTION = 0xFF;
+
+        static ushort PARAM_ABSOLUTION = 0xFFFF;
+        static ushort PARAM_RETRIBUTION = 0xFFFF;
+
+        static ulong RETRIBUTION_RAM;
+        static ulong ABSOLUTION_RAM;
+
+        public static List<ushort> PARAMS_ALL = new List<ushort>();
+        static List<ushort> PARAMS_LIST = new List<ushort>();
 
         static ulong[] LOAD_LIST = new ulong[7];
         static byte PAST_FORM;
@@ -813,6 +826,7 @@ namespace ReFined.KH2.Functions
             var _menuRead = Hypervisor.Read<int>(Variables.ADDR_MenuType);
             var _selectRead = Hypervisor.Read<byte>(Variables.ADDR_MenuSelect);
 
+            var _soraHealth = Hypervisor.Read<byte>(Variables.ADDR_PlayerHP);
             var _gameOverRead = Hypervisor.Read<ulong>(Variables.PINT_GameOver);
             var _gameOverOptions = Hypervisor.Read<ulong>(Variables.PINT_GameOverOptions);
 
@@ -898,43 +912,6 @@ namespace ReFined.KH2.Functions
                 if (_isEscape && Variables.BATTLE_MODE == Variables.BATTLE_TYPE.BOSS && DEBOUNCE[7])
                     DEBOUNCE[7] = false;
 
-                var _detectFirst = _gameOverRead == 0x00 &&
-                                  !_battleState &&
-                                   _pauseRead == 0x01 &&
-                                   _hadesComplete &&
-                                   STATE_COPIED &&
-                                   RETRY_MODE == 0x00;
-
-                if (_detectFirst)
-                {
-                    Thread.Sleep(50);
-
-                    var _detectSecond = _gameOverRead == 0x00 &&
-                                       !_battleState &&
-                                        _pauseRead == 0x01 &&
-                                        _hadesComplete &&
-                                        STATE_COPIED &&
-                                        RETRY_MODE == 0x00;
-
-                    if (_detectSecond)
-                    {
-                        Terminal.Log("The battle has ended. Restoring state.", 0);
-                        Hypervisor.Write(Variables.ADDR_ContData, new byte[0x10FC0]);
-
-                        if (_isEscape)
-                        {
-                            HADES_COUNT = 255;
-                            Terminal.Log("The battle ended on a special edge-case.", 0);
-                        }
-
-                        Variables.CONTINUE_MENU = new Continue();
-
-                        ROXAS_KEYBLADE = 0x0000;
-                        STATE_COPIED = false;
-                        RETRY_HOLD = false;
-                    }
-                }
-
                 if (_gameOverRead == 0x00 && Variables.IS_EVENT && RETRY_MODE != 0x00)
                 {
                     Terminal.Log("After-Retry detected! Restoring functions just-in-case.", 0);
@@ -943,6 +920,32 @@ namespace ReFined.KH2.Functions
                     Hypervisor.Write(INVT_OFFSET, INVT_FUNCTION);
 
                     RETRY_MODE = 0x00;
+                    RETRY_HOLD = false;
+
+                    Thread.Sleep(50);
+                }
+
+                else if (_gameOverRead == 0x00 &&
+                                  !_battleState &&
+                                   _pauseRead == 0x01 &&
+                                   _hadesComplete &&
+                                   STATE_COPIED &&
+                                   _soraHealth != 0x00 &&
+                                   RETRY_MODE == 0x00)
+                {
+                    Terminal.Log("The battle has ended. Restoring state.", 0);
+                    Hypervisor.Write(Variables.ADDR_ContData, new byte[0x10FC0]);
+
+                    if (_isEscape)
+                    {
+                        HADES_COUNT = 255;
+                        Terminal.Log("The battle ended on a special edge-case.", 0);
+                    }
+
+                    Variables.CONTINUE_MENU = new Continue();
+
+                    ROXAS_KEYBLADE = 0x0000;
+                    STATE_COPIED = false;
                     RETRY_HOLD = false;
                 }
 
@@ -1170,6 +1173,160 @@ namespace ReFined.KH2.Functions
                             Hypervisor.Write(_point + _soraOffset + 0x40 + (0x2C * i), _bottomValue, true);
                         }
                     }
+                }
+            }
+        }
+    
+        public static void HandleRetribution()
+        {
+            if (Variables.RETRIBUTION || Variables.ABSOLUTION)
+            {
+                if (!Variables.IS_TITLE)
+                {
+                    var _readMenu = Hypervisor.Read<byte>(Variables.ADDR_MenuFlag);
+                    var _readSubMenu = Hypervisor.Read<byte>(Variables.ADDR_SubMenuType);
+
+                    var _readPicture = Hypervisor.Read<ushort>(Variables.ADDR_LoadedPicture);
+                    var _seekItem = _readPicture == 420 ? 0x300 : 0x301;
+
+                    var _isMenuGood = _readMenu == 0x01 && (_readSubMenu == 0x02 || _readSubMenu == 0x05);
+                    var _isStatusGood = _readPicture == 420 || _readPicture == 421;
+
+                    if (PARAMS_ALL.Count == 0x00)
+                    {
+                        Terminal.Log("Fetching Keyblade Information to use with Addon Keyblades...", 0);
+
+                        for (int i = 0; i < Variables.KEY_DICTIONARY.Count; i++)
+                        {
+                            var _keyData = Variables.KEY_DICTIONARY.ElementAt(i);
+
+                            var _getParam = Operations.FetchItemParams(_keyData.Value);
+                            var _paramID = Hypervisor.Read<ushort>(_getParam, true);
+
+                            PARAMS_ALL.Add(_paramID);
+                        }
+                    }
+
+                    if (PARAM_ABSOLUTION == 0xFFFF)
+                    {
+                        ABSOLUTION_RAM = Operations.FetchItem(0x0301);
+                        RETRIBUTION_RAM = Operations.FetchItem(0x0300);
+
+                        PARAM_ABSOLUTION = Hypervisor.Read<ushort>(Variables.ADDR_SaveData + 0xE204);
+                        PARAM_RETRIBUTION = Hypervisor.Read<ushort>(Variables.ADDR_SaveData + 0xE200);
+
+                        if (PARAM_ABSOLUTION == 0x0000)
+                        {
+                            Hypervisor.Read<ushort>(Variables.ADDR_SaveData + 0xE204, 0x50);
+                            PARAM_ABSOLUTION = 0x50;
+                        }
+
+                        if (PARAM_RETRIBUTION == 0x0000)
+                        {
+                            Hypervisor.Read<ushort>(Variables.ADDR_SaveData + 0xE200, 0x50);
+                            PARAM_RETRIBUTION = 0x50;
+                        }
+
+                        Hypervisor.Write(RETRIBUTION_RAM + 0x06, PARAM_RETRIBUTION, true);
+                        Hypervisor.Write(ABSOLUTION_RAM + 0x06, PARAM_ABSOLUTION, true);
+                    }
+
+                    var _equipArray = new ushort[]
+                    {
+                        Hypervisor.Read<ushort>(Variables.ADDR_SaveData + 0x24F0),
+                        Hypervisor.Read<ushort>(Variables.ADDR_SaveData + 0x32F4),
+                        Hypervisor.Read<ushort>(Variables.ADDR_SaveData + 0x33D4),
+                        Hypervisor.Read<ushort>(Variables.ADDR_SaveData + 0x339C)
+                    };
+
+                    var _absolutionCheck = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x3580 + 0x139) == 0x00 && _equipArray.FirstOrDefault(x => x == 0x0301) == 0x00;
+                    var _retributionCheck = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x3580 + 0x138) == 0x00 && _equipArray.FirstOrDefault(x => x == 0x0300) == 0x00;
+
+                    if (_absolutionCheck && Variables.ABSOLUTION)
+                    {
+                        Terminal.Log("Giving Absolution...", 0);
+                        Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x3580 + 0x139, 0x01);
+                    }
+
+                    if (_retributionCheck && Variables.RETRIBUTION)
+                    {
+                        Terminal.Log("Giving Retribution...", 0);
+                        Hypervisor.Write<byte>(Variables.ADDR_SaveData + 0x3580 + 0x138, 0x01);
+                    }
+
+                    if (INDEX_ABSOLUTION == 0xFF)
+                        INDEX_ABSOLUTION = PARAMS_ALL.IndexOf(PARAM_ABSOLUTION);
+
+                    if (INDEX_RETRIBUTION == 0xFF)
+                        INDEX_RETRIBUTION = PARAMS_ALL.IndexOf(PARAM_RETRIBUTION);
+
+                    if (_readMenu == 0x01 && _readSubMenu != 0xFF && PARAMS_LIST.Count == 0)
+                    {
+                        Terminal.Log("Creating the Key Inventory Array...", 0);
+
+                        for (int i = 0; i < Variables.KEY_DICTIONARY.Count; i++)
+                        {
+                            var _keyData = Variables.KEY_DICTIONARY.ElementAt(i);
+                            var _slotCheck = Hypervisor.Read<byte>(Variables.ADDR_SaveData + 0x3580 + _keyData.Key);
+                            var _tryFetch = _equipArray.FirstOrDefault(x => x == _keyData.Value);
+
+                            if (_slotCheck == 0x01)
+                                PARAMS_LIST.Add(PARAMS_ALL[i]);
+
+                            else if (_tryFetch != 0x00)
+                                PARAMS_LIST.Add(PARAMS_ALL[i]);
+                        }
+                    }
+
+                    else if (_readMenu == 0x00 && PARAMS_LIST.Count > 0)
+                    {
+                        PARAMS_LIST.Clear();
+                        DEBOUNCE[2] = false;
+                    }
+
+                    if (_isMenuGood)
+                    {
+                        if (_isStatusGood && Variables.IS_PRESSED(Variables.BUTTON.TRIANGLE) && !DEBOUNCE[2])
+                        {
+                            var _currParam = _seekItem == 0x0300 ? INDEX_RETRIBUTION : INDEX_ABSOLUTION;
+                            Terminal.Log("Cycling the mimic of " + (_seekItem == 0x0300 ? "Retribution." : "Absolution."), 0);
+
+                            _currParam++;
+
+                            if (_currParam >= PARAMS_LIST.Count)
+                                _currParam = 0x00;
+
+                            Hypervisor.Write((_seekItem == 0x0300 ? RETRIBUTION_RAM : ABSOLUTION_RAM) + 0x06, PARAMS_LIST[_currParam], true);
+
+                            if (_seekItem == 0x0300)
+                            {
+                                Hypervisor.Write(Variables.ADDR_SaveData + 0xE200, PARAMS_LIST[_currParam]);
+                                PARAM_RETRIBUTION = PARAMS_LIST[_currParam];
+                                INDEX_RETRIBUTION = _currParam;
+                            }
+
+                            else
+                            {
+                                Hypervisor.Write(Variables.ADDR_SaveData + 0xE204, PARAMS_LIST[_currParam]);
+                                PARAM_ABSOLUTION = PARAMS_LIST[_currParam];
+                                INDEX_ABSOLUTION = _currParam;
+                            }
+
+                            Sound.PlaySFX(0x02);
+                            Variables.SharpHook[OffsetItemUpdate].Execute();
+
+                            DEBOUNCE[2] = true;
+                        }
+
+                        else if ((!_isStatusGood || !Variables.IS_PRESSED(Variables.BUTTON.TRIANGLE)) && DEBOUNCE[2])
+                            DEBOUNCE[2] = false;
+                    }
+                }
+                
+                else
+                {
+                    PARAM_ABSOLUTION = 0xFFFF;
+                    PARAM_RETRIBUTION = 0xFFFF;
                 }
             }
         }

@@ -8,6 +8,8 @@ namespace ReFined.KH2.InGame
     public static class Operations
     {
         public static nint FUNC_FINDFILE;
+        public static nint FUNC_ITEMTABLEGET;
+        public static nint FUNC_ITEMPARAMGET;
         public static nint FUNC_OBJENTRYGET;
         public static nint FUNC_GETFILESIZE;
         public static nint FUNC_MESSAGEGETDATA;
@@ -113,6 +115,29 @@ namespace ReFined.KH2.InGame
 
             else
                 return Hypervisor.MemoryOffset + (ulong)_fetchObject;
+        }
+
+        public static ulong FetchItem(short ItemID)
+        {
+            var _fetchItem = Variables.SharpHook[FUNC_ITEMTABLEGET].Execute(ItemID);
+
+            if (_fetchItem == IntPtr.Zero)
+                return 0x00;
+
+            else
+                return Hypervisor.MemoryOffset + (ulong)_fetchItem;
+        }
+
+        public static ulong FetchItemParams(short ItemID)
+        {
+            var _fetchItem = FetchItem(ItemID);
+            var _fetchParams = Variables.SharpHook[FUNC_ITEMPARAMGET].Execute((long)_fetchItem);
+
+            if (_fetchParams == IntPtr.Zero)
+                return 0x00;
+
+            else
+                return Hypervisor.MemoryOffset + (ulong)_fetchParams;
         }
     }
 }

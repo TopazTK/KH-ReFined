@@ -75,6 +75,7 @@ namespace ReFined.KH2.Functions
 
             Critical.OffsetMapJump = Hypervisor.FindSignature(Variables.FUNC_MapJump);
             Critical.OffsetSetFadeOff = Hypervisor.FindSignature(Variables.FUNC_SetFadeOff);
+            Critical.OffsetItemUpdate = Hypervisor.FindSignature(Variables.FUNC_ItemUpdate);
             Critical.OffsetConfigUpdate = Hypervisor.FindSignature(Variables.FUNC_ConfigUpdate);
             Critical.OffsetSelectUpdate = Hypervisor.FindSignature(Variables.FUNC_SelectUpdate);
 
@@ -82,6 +83,9 @@ namespace ReFined.KH2.Functions
             Operations.FUNC_GETFILESIZE = Hypervisor.FindSignature(Variables.FUNC_GetFileSize);
             Operations.FUNC_OBJENTRYGET = Hypervisor.FindSignature(Variables.FUNC_ObjentryGet);
             Operations.FUNC_MESSAGEGETDATA = Hypervisor.FindSignature(Variables.FUNC_MessageGetData);
+
+            Operations.FUNC_ITEMTABLEGET = Hypervisor.FindSignature(Variables.FUNC_ItemTableGet);
+            Operations.FUNC_ITEMPARAMGET = Hypervisor.FindSignature(Variables.FUNC_ItemParamGet);
 
             Sound.FUNC_PLAYSFX = Hypervisor.FindSignature(Variables.FUNC_PlaySFX);
             Sound.FUNC_KILLBGM = Hypervisor.FindSignature(Variables.FUNC_StopBGM);
@@ -285,6 +289,19 @@ namespace ReFined.KH2.Functions
                 Variables.TECHNICOLOR = true;
             }
 
+            if (Operations.GetFileSize("obj/W_EX010_RF.mdlx") != 0x00)
+            {
+                Terminal.Log("Ticket to Retribution detected! Adjusting logic...", 0);
+                Variables.RETRIBUTION = true;
+            }
+
+            if (Operations.GetFileSize("obj/W_EX010_RX.mdlx") != 0x00)
+            {
+                Terminal.Log("Ticket to Absolution detected! Adjusting logic...", 0);
+                Variables.ABSOLUTION = true;
+            }
+            
+
             Variables.Source = new CancellationTokenSource();
             Variables.Token = Variables.Source.Token;
 
@@ -334,6 +351,8 @@ namespace ReFined.KH2.Functions
                     Critical.HandleRatio();
                     Critical.HandleMagicSort();
                     Critical.HandleFormShortcuts();
+
+                    Critical.HandleRetribution();
 
                     Demand.TriggerEncounter();
                     Demand.TriggerAutoattack();

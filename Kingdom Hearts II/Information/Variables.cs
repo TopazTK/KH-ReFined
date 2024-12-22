@@ -21,7 +21,7 @@ namespace ReFined.KH2.Information
         public static string PLATFORM = "EPIC";
         #endif
 
-        public static double VERSION = 2.00;
+        public static double VERSION = 2.50;
 
         public static bool DEV_MODE = false;
         public static bool AUTOATTACK = false;
@@ -35,8 +35,10 @@ namespace ReFined.KH2.Information
         public static int SUB_LANGUAGE = 0x00;
         public static bool CONTROLLER_MODE = true;
 
-        public static BUTTON MARE_SHORTCUT = BUTTON.NONE;
         public static BUTTON RESET_COMBO = BUTTON.NONE;
+
+        public static bool ABSOLUTION = false;
+        public static bool RETRIBUTION = false;
 
         public static bool TECHNICOLOR = false;
         public static bool ENEMY_VANILLA = true;
@@ -109,12 +111,12 @@ namespace ReFined.KH2.Information
         public static MemorySharp SharpHook;
         public static DiscordRpcClient DiscordClient = new DiscordRpcClient("833511404274974740");
 
-        public static string[] SUMMObjentry =
+        public static short[] SUMMObjentry =
         {
-            "P_EX330",
-            "P_EX350",
-            "N_HB040_BTL",
-            "P_AL010"
+            0x045B,
+            0x06C8,
+            0x07F5,
+            0x030A
         };
 
         public static short[] BOSSObjentry =
@@ -185,6 +187,34 @@ namespace ReFined.KH2.Information
             BUTTON.CIRCLE
         };
 
+        public static Dictionary<ushort, short> KEY_DICTIONARY = new Dictionary<ushort, short>()
+        {
+            { 0x0021, 0x0029 },
+            { 0x0022, 0x002A },
+            { 0x0023, 0x002B },
+            { 0x00FB, 0x01E0 },
+            { 0x00FC, 0x01E1 },
+            { 0x00FF, 0x01E4 },
+            { 0x0100, 0x01E5 },
+            { 0x0101, 0x01E6 },
+            { 0x0102, 0x01E7 },
+            { 0x0103, 0x01E8 },
+            { 0x0104, 0x01E9 },
+            { 0x0105, 0x01EA },
+            { 0x0106, 0x01EB },
+            { 0x0107, 0x01EC },
+            { 0x0108, 0x01ED },
+            { 0x0109, 0x01EE },
+            { 0x010A, 0x01EF },
+            { 0x010B, 0x01F0 },
+            { 0x010C, 0x01F1 },
+            { 0x010D, 0x01F2 },
+            { 0x010E, 0x01F3 },
+            { 0x010F, 0x01F4 },
+            { 0x0118, 0x021F },
+            { 0x0119, 0x0220 },
+        };
+
         // === TASK VARIABLES === //
 
         public static Task DCTask;
@@ -197,7 +227,7 @@ namespace ReFined.KH2.Information
 
         // Steam Menu Array = 5BADB0
 
-#if STEAM
+        #if STEAM
 
         public static ulong ADDR_Area = 0x0717008;
         public static ulong ADDR_Mare = 0x0000000;
@@ -217,7 +247,6 @@ namespace ReFined.KH2.Information
         public static ulong ADDR_FadeValue = 0x0ABB3C7;
         public static ulong ADDR_Framerate = 0x071536E;
         public static ulong ADDR_PauseFlag = 0x0717418;
-        public static ulong ADDR_ActionExe = 0x2A5C996;
         public static ulong ADDR_MovieFlag = 0x2B561E8;
         public static ulong ADDR_IntroMenu = 0x0820200;
         public static ulong ADDR_VendorMem = 0x2A25378;
@@ -239,6 +268,7 @@ namespace ReFined.KH2.Information
         public static ulong ADDR_CutsceneMode = 0x0B65210;
         public static ulong ADDR_Framelimiter = 0x0ABAC08;
         public static ulong ADDR_ObjentryBase = 0x2A254D0;
+        public static ulong ADDR_LoadedPicture = 0x0743E94;
         public static ulong ADDR_LimitShortcut = 0x05C9678;
         public static ulong ADDR_MagicCommands = 0x2A11188;
         public static ulong ADDR_IntroSelection = 0x0820500;
@@ -251,13 +281,13 @@ namespace ReFined.KH2.Information
         public static ulong DATA_EVTPath = 0x05B9020;
         public static ulong DATA_BTLPath = 0x05C5E48;
         public static ulong DATA_GMIPath = 0x05B5818;
-
         public static ulong PINT_Camp2LD = 0x09076D0;
         public static ulong PINT_GameOver = 0x0BEF4A8;
         public static ulong PINT_SystemMSG = 0x2A11678;
         public static ulong PINT_ChildMenu = 0x2A11118;
         public static ulong PINT_EnemyInfo = 0x2A0CD70;
         public static ulong PINT_EventInfo = 0x2A11478;
+        public static ulong PINT_ActionEXE = 0x2A161E8;
         public static ulong PINT_PartyLimit = 0x2A24CC0;
         public static ulong PINT_ConfigMenu = 0x0BF0150;
         public static ulong PINT_SaveInformation = 0x079CB10;
@@ -284,9 +314,9 @@ namespace ReFined.KH2.Information
         public static ulong ADDR_FadeValue = 0x0ABAE47;
         public static ulong ADDR_Framerate = 0x08CBD0A;
         public static ulong ADDR_PauseFlag = 0x0717208;
-        public static ulong ADDR_ActionExe = 0x2A5C416;
         public static ulong ADDR_MovieFlag = 0x2B56028;
         public static ulong ADDR_IntroMenu = 0x0820200;
+        public static ulong ADDR_VendorMem = 0x2A24DF8;
         public static ulong ADDR_PromptType = 0x0715380;
         public static ulong ADDR_MenuSelect = 0x0902A40;
         public static ulong ADDR_ReactionID = 0x2A10BE2;
@@ -306,6 +336,7 @@ namespace ReFined.KH2.Information
         public static ulong ADDR_CutsceneFlag = 0x07281C0;
         public static ulong ADDR_Framelimiter = 0x0ABA688;
         public static ulong ADDR_ObjentryBase = 0x2A24F50;
+        public static ulong ADDR_LoadedPicture = 0x0743C14;
         public static ulong ADDR_LimitShortcut = 0x05C97E8;
         public static ulong ADDR_MagicCommands = 0x2A10C08;
         public static ulong ADDR_IntroSelection = 0x0820500;
@@ -317,6 +348,7 @@ namespace ReFined.KH2.Information
         public static ulong DATA_ANBPath = 0x05B9140;
         public static ulong DATA_EVTPath = 0x05B91B0;
         public static ulong DATA_BTLPath = 0x05C5FB8;
+        public static ulong DATA_GMIPath = 0x05B59D0;
 
         public static ulong PINT_Camp2LD = 0x0907170;
         public static ulong PINT_GameOver = 0x0BEEF28;
@@ -324,12 +356,12 @@ namespace ReFined.KH2.Information
         public static ulong PINT_ChildMenu = 0x2A10B98;
         public static ulong PINT_EnemyInfo = 0x2A0C7F0;
         public static ulong PINT_EventInfo = 0x2A10EF8;
-        public static ulong PINT_ConfigMenu = 0x0BEFBD0;
+        public static ulong PINT_ActionEXE = 0x2A15C68;
         public static ulong PINT_PartyLimit = 0x2A24740;
+        public static ulong PINT_ConfigMenu = 0x0BEFBD0;
         public static ulong PINT_SaveInformation = 0x2B0C240;
         public static ulong PINT_GameOverOptions = 0x2A10DE0;
         public static ulong PINT_SubMenuOptionSelect = 0x0BEE758;
-
 #endif
 
         // === DICTIONARIES === //
@@ -369,6 +401,9 @@ namespace ReFined.KH2.Information
         public static string FUNC_ResetCommandMenu = "40 56 48 83 EC 30 8B 35 ?? ?? ?? ?? E8 ?? ?? ?? ?? 84 C0 0F 85 ?? ?? ?? ?? E8 ?? ?? ?? ?? 84 C0";
         public static string FUNC_ObjentryGet = "40 53 48 83 EC 20 8B C1 8B D1 25 FF FF FF 0F 3D EE 03 00 00 0F 87 ?? ?? ?? ?? 0F 84 ?? ?? ?? ??";
         public static string FUNC_MessageGetData = "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 41 56 41 57 48 83 EC 50 45 33 F6 48 63 E9 33 F6 48 8D 3D ?? ?? ?? ?? 4C 8D 3D ?? ?? ?? ??";
+        public static string FUNC_ItemTableGet = "48 8B 15 ?? ?? ?? ?? 45 33 C0 44 8B 4A 04 48 8D 42 08 45 85 C9 7E 13 0F B7 10 3B D1 74 0E";
+        public static string FUNC_ItemParamGet = "0F B6 41 02 3C 02 72 1A 3C 0D 76 0D 3C 0F 77 12 0F B7 49 04 E9 ?? ?? ?? ??";
+        public static string FUNC_ItemUpdate = "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 41 54 41 55 41 56 41 57 48 83 EC 40 45 32 E4 E8 ?? ?? ?? ??";
 
         // === HOTFIX SIGNATURES === //
 
