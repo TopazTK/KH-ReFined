@@ -1,24 +1,7 @@
-# Kingdom Hearts Re:Fined Setup for Windows and Linux
+# How to install Re:Fined
 
-Guide on how to setup Kingdom Hearts 1.5+2.5 HD ReMix on Windows, Steam Deck, and other Linux Distros.
-
-# Installing latest Re:Fined
 ## For Windows Users:
-- Click [here](https://github.com/KHOmega/KH-SteamDeck-Setup/blob/main/refined-windows-setup.md) for installation steps on how to install Re:Fined on Windows.
+- Click [here](https://www.youtube.com/watch?v=m1IRz-_uCmc&list=PLMI1YpfVD_3EVSd_pCiPrFh1bio-tvbbg&index=10) for an installation video on how to install Re:Fined on Windows by Kité
 
-## For Steam Deck / Linux Users:
-- Click [here](https://github.com/KHOmega/KH-SteamDeck-Setup/blob/main/refined-linux-setup.md) for installation steps on how to install Re:Fined on your Steam Deck / Linux.
-
-# Installing Re:Fined v3.20
-## Without Dual Audio
-- Backup the original exe (by renaming it to a `GAMENAME-bac.exe` format or similar).
-- Drag the Re:Fined EXE unto the game directory.
-- Tada! You have installed it.
-
-## With Dual Audio
-- Backup the original exe (by renaming it to a `GAMENAME-bac.exe` format or similar).
-- Drag the Re:Fined EXE unto the game directory and remove the `DualAudio-` part from it's name.
-- Download the patch for [DDD](https://bit.ly/DualAudioDDD).
-- Download latest [KHPCPatchManager](https://github.com/AntonioDePau/KHPCPatchManager/releases).
-- Patch the game with the patch you downloaded. [Instructions](https://github.com/AntonioDePau/KHPCPatchManager/blob/main/README.md).
-- Done! You now have Re:Fined v3.15 with Dual Audio!
+## For Linux Users:
+- Click [here](https://github.com/KHOmega/KH-PC-and-Linux-Setup) for installation steps on how to install Re:Fined on Linux by KHOmega
