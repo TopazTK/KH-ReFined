@@ -1,9 +1,18 @@
 # How to install Re:Fined
 
-## For Windows Users:
-- Click [here](https://www.youtube.com/watch?v=m1IRz-_uCmc&list=PLMI1YpfVD_3EVSd_pCiPrFh1bio-tvbbg&index=10) for an installation video on how to install Re:Fined by Kité
+### For Windows Users:
+- Steam / Epic Games Store
+    - Click [here](https://github.com/KHOmega/KH-PC-and-Linux-Setup/blob/main/refined-windows-setup.md) for installation steps on how to install ***Re:Fined***.
+    - Click [here](https://www.youtube.com/watch?v=m1IRz-_uCmc&) for an installation video on how to install ***Re:Fined*** by [Kité2810](https://github.com/Kite2810)
 
-- Click [here](https://github.com/KHOmega/KH-PC-and-Linux-Setup/blob/main/refined-windows-setup.md) for installation steps on how to install Re:Fined by KHOmega
+### For SteamOS/Bazzite/other Linux Distros:
+ - Steam
+    - Click [here](https://github.com/KHOmega/KH-PC-and-Linux-Setup/blob/main/refined-steam-linux-setup.md) for installation steps on how to install ***Re:Fined***.
+     
+       - This guide ***uses*** Panacea and ***does not work*** on Gaming Mode on SteamOS/Bazzite 
+    - Click [here](https://www.youtube.com/watch?v=EV6HlD90ePw&) for an installation video on how to install ***Re:Fined*** by geo.stigma.
+     
+       - This guide ***does not*** use Panacea and instead directly patches the game, but ***does work*** on Gaming Mode on Steam OS/Bazzite
 
-## For Linux Users:
-- Click [here](https://github.com/KHOmega/KH-PC-and-Linux-Setup?tab=readme-ov-file#for-steamosbazziteother-linux-distros) for installation steps on how to install Re:Fined by KHOmega
+- Epic Games Store
+    - Click [here](https://github.com/KHOmega/KH-PC-and-Linux-Setup/blob/main/refined-egs-linux-setup.md) for installation steps on how to install ***Re:Fined***.
